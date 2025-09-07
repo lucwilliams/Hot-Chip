@@ -4,7 +4,7 @@ Hot-Chip is a work-in-progress interpreter for the CHIP-8 programming language.
 
 ### Development progress:
     - Wrapper class for handling SDL window functionality ✔
-    - Abstract registers and program memory (incl. stack and font data)
+    - Abstract registers and program memory (incl. stack and font data) ✔
     - Implement simple instructions to set/read registers and draw to display
     - Decode binary program files and execute instructions
     - Long term: Timers, input, sound and all remaining instructions.
@@ -16,8 +16,7 @@ Hot-Chip uses [SDL2](https://www.libsdl.org/) (licensed under the [zlib license]
 
 You will need to install SDL2 to build this project:
 - **Windows (MinGW):** 
-  - Download an SDL2 MinGW package from the [SDL releases](https://github.com/libsdl-org/SDL/tags).
-  - e.g. "SDL2-devel-2.XX.XX-mingw.zip"
+  - Download *SDL2-devel-2.32.8-mingw.zip* from the [SDL releases](https://github.com/libsdl-org/SDL/releases/tag/release-2.32.8).
   - Extract into `lib/` and compile with cmake.
 
 SDL2 CMake build script provided by [tcbrindle](https://github.com/tcbrindle/sdl2-cmake-scripts) under the 2-Clause BSD Licence.

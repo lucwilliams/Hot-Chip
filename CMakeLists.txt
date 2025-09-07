@@ -7,6 +7,7 @@ add_executable(
     Hot-Chip
     src/main.cpp
     src/window/Window.cpp
+    src/interpreter/Chip8.cpp
 )
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)

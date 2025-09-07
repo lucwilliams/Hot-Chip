@@ -1,34 +1,17 @@
+#include "interpreter/Chip8.h"
 #include "window/Window.h"
+#include <iostream>
 
 int main(int argc, char** argv) {
-  Window window = Window();
+  if (argc > 1) {
+    char* fileName = argv[1];
 
-  SDL_Event event;
-  bool running {true};
+    Window window = Window();
+    Chip8 interpreter = Chip8(fileName, window);
 
-  // Window demo (smiley face)
-
-  // Eyes
-  window.flipPixel(25, 10);
-  window.flipPixel(35, 10);
-
-  // Grin
-  window.flipPixel(23, 13);
-  window.flipPixel(37, 13);
-
-  // Smile
-  for (int i {24}; i < 37; ++i)
-    window.flipPixel(i, 14);
-
-  while (running) {
-    while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_QUIT) {
-        running = false;
-        break;
-      }
-    }
-
-    window.Draw();
+    interpreter.start();
+  } else {
+    std::cout << "No ROM provided." << std::endl;
   }
 
   return 0;
