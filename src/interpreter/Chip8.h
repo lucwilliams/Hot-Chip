@@ -1,10 +1,10 @@
 #pragma once
 
-#include <cstdint>
+#include <array>
 #include "../window/Window.h"
 
 class Chip8 {
-    uint8_t m_memory[4096] {};
+    std::array<uint8_t, 4096> m_memory {};
 
     // Registers 0-9
     uint8_t V0 {};
@@ -32,6 +32,6 @@ class Chip8 {
     Window m_window {};
 
     public:
-        explicit Chip8(char fileName[], const Window& window);
+        Chip8(char fileName[], const Window& window);
         void start();
 };

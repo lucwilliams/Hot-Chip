@@ -7,7 +7,7 @@
 
 namespace {
     // https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#font
-    constexpr uint8_t kFontData[] = {
+    constexpr std::array<uint8_t, 80> kFontData = {
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
         0x20, 0x60, 0x20, 0x20, 0x70, // 1
         0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -50,13 +50,13 @@ Chip8::Chip8(char fileName[], const Window& window)
 
         // Read in ROM, offsetting by 512 bytes (position 0x200)
         // The initial 512 bytes of the Chip-8 memory was used to store the interpreter code in the original hardware.
-        inFS.read(reinterpret_cast<char*>(m_memory + 0x200), size);
+        inFS.read(reinterpret_cast<char*>(m_memory.begin() + 0x200), size);
     } else {
         std::cerr << "Error opening ROM: " << filePath << ", " << std::strerror(errno) << std::endl;
     }
 
     // Initialise font data. Start font data in position 0x50 (+80 bytes) as is conventional.
-    std::move(kFontData, kFontData, m_memory + 0x50);
+    std::copy(kFontData.begin(), kFontData.end(), m_memory.begin() + 0x50);
 }
 
 void Chip8::start() {
