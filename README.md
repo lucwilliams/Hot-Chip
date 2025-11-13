@@ -17,6 +17,10 @@ Hot-Chip uses [SDL2](https://www.libsdl.org/) (licensed under the [zlib license]
 You will need to install SDL2 to build this project:
 - **Windows (MinGW):** 
   - Download *SDL2-devel-2.32.8-mingw.zip* from the [SDL releases](https://github.com/libsdl-org/SDL/releases/tag/release-2.32.8).
-  - Extract into `lib/` and compile with cmake.
+  - Extract into `lib/` in project root.
+
+- **Linux:**
+  - Install libSDL2 development binaries using your package manager.
+  - e.g. `sudo apt install libsdl2-dev` for Ubuntu/Debian.
 
 SDL2 CMake build script provided by [tcbrindle](https://github.com/tcbrindle/sdl2-cmake-scripts) under the 2-Clause BSD Licence.
