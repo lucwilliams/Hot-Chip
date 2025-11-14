@@ -1,18 +1,18 @@
+#include <iostream>
 #include "interpreter/Chip8.h"
 #include "window/Window.h"
-#include <iostream>
 
 int main(int argc, char** argv) {
-  if (argc > 1) {
-    char* fileName = argv[1];
+    if (argc > 1) {
+        std::string fileName{argv[1]};
 
-    Window window = Window();
-    Chip8 interpreter = Chip8(fileName, window);
+        Window window = Window();
+        Chip8 interpreter = Chip8(fileName, window);
 
-    interpreter.start();
-  } else {
-    std::cout << "No ROM provided." << std::endl;
-  }
+        interpreter.start();
+    } else {
+        std::cout << "No ROM provided." << std::endl;
+    }
 
-  return 0;
+    return 0;
 }
