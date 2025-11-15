@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <iostream>
+#include <cstring>
 #include "Window.h"
 
 // Initialise program window
@@ -72,7 +73,7 @@ Window::Window() {
     m_frameBuffer = static_cast<uint8_t*>(m_surface->pixels);
 }
 
-void Window::Draw() {
+void Window::draw() {
     // Only draw when the framebuffer has been modified
     if (m_pixelsModified) {
         // Clean up last draw
@@ -113,10 +114,18 @@ void Window::flipPixel(int x_index, int y_index) {
     pixelsByte ^= bitIndex;
 }
 
+void Window::clearDisplay() {
+    // Zero out framebuffer to completely clear it
+    std::memset(m_frameBuffer, 0, 256);
+
+    // Update frame
+    m_pixelsModified = true;
+    draw();
+}
+
 Window::~Window() {
     SDL_DestroyTexture(m_texture);
     SDL_DestroyWindow(m_window);
-    SDL_FreeSurface(m_surface);
     SDL_DestroyRenderer(m_renderer);
     SDL_Quit();
 }

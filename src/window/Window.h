@@ -24,6 +24,7 @@ class Window {
     public:
         Window();
         ~Window();
-        void Draw();
+        void draw();
         void flipPixel(int x_index, int y_index);
+        void clearDisplay();
 };

@@ -13,9 +13,8 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 # Enable warnings.
 # Only optimise for release and only use debug symbols for debug builds.
 target_compile_options(${PROJECT_NAME} PRIVATE
-    -Wall -Werror
-    $<$<CONFIG:Release>:-O3>
-    $<$<CONFIG:Debug>:-g -O0>
+    $<$<CONFIG:Release>:-O3 -Wall -Werror -Wextra>
+    $<$<CONFIG:Debug>:-g -DDEBUG -O0>
 )
 
 if (WIN32)
