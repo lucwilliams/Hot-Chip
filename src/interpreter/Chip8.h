@@ -35,11 +35,21 @@ class Chip8 {
     // Offset where font data is loaded into emulated memory (80)
     static constexpr uint8_t kFontOffset = 0x50;
 
-    // The value used with AND on a 16 bit instruction to obtain first nibble
-    static constexpr uint16_t kFirstNibbleMask = 0xF000;
+    // The bit length of a nibble
+    static constexpr uint8_t kNibbleLength = 4;
 
-    // The value used with AND on a 16 bit instruction to obtain first byte
-    static constexpr uint16_t kSecondByteMask = 0xFF;
+    // The value used with AND on a 16 bit instruction to obtain a nibble
+    // 00001111 in binary
+    static constexpr uint8_t kNibbleMask = 0xF;
+
+    // The value used with AND on a 16 bit instruction to obtain the least significant byte
+    // 11111111 in binary
+    static constexpr uint8_t kLowerByteMask = 0xFF;
+
+    // The value used with AND on a 16 bit instruction
+    // to obtain the lower 12 bits for addressing
+    // 111111111111 in binary
+    static constexpr uint16_t kAddressMask = 0xFFF;
 
     // Emulated memory
     std::array<uint8_t, kMemorySize> m_memory{};
@@ -57,12 +67,53 @@ class Chip8 {
 
     // Window and m_debug are initialised in the constructor initialisation list
     Window m_window;
-    bool m_debug;
+    const bool m_debug;
 
+    // Second step of the fetch/decode/execute loop
     void decode(uint16_t instruction);
 
-    // For opcodes with the 0**** prefix
+    // -- Helper functions for manipulating opcodes --
+
+    // Helper function to obtain a 4 bit nibble by position from a 16 bit opcode
+    static inline uint8_t nibbleAt(uint16_t instruction, uint8_t position) {
+        // Position is an index starting at zero and
+        // must not exceed the index of the fourth nibble.
+        if (position > kNibbleLength - 1)
+            throw std::runtime_error(
+                "[ERROR] Out of range byte access in nibbleAt() call with position: "
+                + std::to_string(position)
+            );
+
+        // Byte mask of 8 bits at desired position.
+        uint16_t positionMask = kNibbleMask << position * kNibbleLength;
+
+        const auto byte = static_cast<uint8_t>(
+            (instruction & positionMask) >> position * kNibbleLength
+        );
+
+        return byte;
+    }
+
+    // Helper function to obtain a 12 bit address (NNN) from a 16 bit opcode
+    static inline uint8_t getLowByte(uint16_t instruction) {
+        const auto lowByte = static_cast<uint8_t>(
+            instruction & kLowerByteMask
+        );
+        return lowByte;
+    }
+
+    // Helper function to obtain a 12 bit address (NNN) from a 16 bit opcode
+    static inline uint16_t getAddressFromInstruction(uint16_t instruction) {
+        const uint16_t address = instruction & kAddressMask;
+        return address;
+    }
+
+    // All emulated instruction opcodes by prefix
     void opcode0(uint16_t instruction);
+    void opcode1(uint16_t instruction);
+    void opcode6(uint16_t instruction);
+    void opcode7(uint16_t instruction);
+    void opcodeA(uint16_t instruction);
 
     public:
         Chip8(const std::string& fileName, const Window& window, bool debugEnabled);

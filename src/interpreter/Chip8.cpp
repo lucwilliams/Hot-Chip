@@ -67,15 +67,34 @@ void Chip8::decode(uint16_t instruction) {
 			<< std::hex << std::uppercase
 			<< instruction << std::endl;
 
-	const uint8_t firstNibble = static_cast<uint8_t>(
-		(instruction & kFirstNibbleMask) >> 8
-	);
+	// Fourth nibble is the most significant
+	const uint8_t highestNibble = nibbleAt(instruction, 3);
 
-	switch (firstNibble) {
-		case 0:
+	// Map instruction to opcode function call
+	switch (highestNibble) {
+		case 0x0:
 			// CLEAR_DISPLAY and RETURN opcodes
 			opcode0(instruction);
 			break;
+        case 0x1:
+            // GOTO NNN
+            opcode1(instruction);
+            break;
+		case 0x6:
+			// Set register VX to NN
+			opcode6(instruction);
+			break;
+		case 0x7:
+			// Add NN to VX
+			opcode7(instruction);
+			break;
+		case 0xA:
+			// Set I to NNN
+			opcodeA(instruction);
+			break;
+		default:
+			if (m_debug)
+				std::cout << "[DEBUG] Opcode not implemented: " << instruction << std::endl;
 	}
 
 	// Increment PC by 2 as instructions are two bytes in size
@@ -93,7 +112,7 @@ void Chip8::start() {
 
 	// The memory location of the ROM's final valid instruction
 	// Subtract two since instructions are two bytes in size.
-	uint16_t finalInstruction{
+	const uint16_t finalInstruction {
 		static_cast<uint16_t>(kROMOffset + m_ROMSize - 2)
 	};
 
