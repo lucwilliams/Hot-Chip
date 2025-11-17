@@ -50,15 +50,6 @@ Chip8::Chip8(const std::string& fileName, const Window& window, bool debugEnable
 }
 
 void Chip8::decode(uint16_t instruction) {
-	/*
-	 * 00E0 (clear screen)
-	 * 1NNN (jump)
-	 * 6XNN (set register VX)
-	 * 7XNN (add value to register VX)
-	 * ANNN (set index register I)
-	 * DXYN (display/draw)
-	 */
-
 	// Output instruction for debug
 	if (m_debug)
 		// Output in hexadecimal form with zero padding if necessary
@@ -92,13 +83,19 @@ void Chip8::decode(uint16_t instruction) {
 			// Set I to NNN
 			opcodeA(instruction);
 			break;
+		case 0xD:
+			// Draw sprite at (VX, VY) with height N
+			opcodeD(instruction);
+			break;
 		default:
 			if (m_debug)
 				std::cout << "[DEBUG] Opcode not implemented: " << instruction << std::endl;
 	}
 
-	// Increment PC by 2 as instructions are two bytes in size
-	m_PC += 2;
+	// Do not increment PC for jump instruction
+    if (highestNibble != 0x1)
+		// Increment PC by 2 as instructions are two bytes in size
+		m_PC += 2;
 }
 
 void Chip8::start() {
@@ -155,7 +152,7 @@ void Chip8::start() {
 				}
 			}
 
-			m_window.draw();
+            m_window.render();
 		}
 	}
 }

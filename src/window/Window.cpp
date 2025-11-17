@@ -45,9 +45,11 @@ Window::Window() {
 
     // Use SDL_PIXELFORMAT_INDEX1LSB for 1-bit pixels
     m_surface = SDL_CreateRGBSurfaceWithFormat(
-        0, kScreenWidth, kScreenHeight, 1,
-       SDL_PIXELFORMAT_INDEX1LSB
+        0, kScreenWidth, kScreenHeight,
+        SDL_BITSPERPIXEL(SDL_PIXELFORMAT_INDEX1MSB),
+        SDL_PIXELFORMAT_INDEX1MSB
     );
+
 
     if (!m_surface) {
         std::cerr << "Error creating surface." << std::endl;
@@ -73,17 +75,17 @@ Window::Window() {
     m_frameBuffer = static_cast<uint8_t*>(m_surface->pixels);
 }
 
-void Window::draw() {
-    // Only draw when the framebuffer has been modified
+void Window::render() {
+    // Only render when the framebuffer has been modified
     if (m_pixelsModified) {
-        // Clean up last draw
+        // Clean up last render
         SDL_RenderClear(m_renderer);
         SDL_DestroyTexture(m_texture);
 
         // Create new texture. m_surface->pixels is our framebuffer
         m_texture = SDL_CreateTextureFromSurface(m_renderer, m_surface);
 
-        // Copy and draw
+        // Copy and render
         SDL_RenderCopy(m_renderer, m_texture, nullptr, nullptr);
         SDL_RenderPresent(m_renderer);
 
@@ -92,35 +94,71 @@ void Window::draw() {
     }
 }
 
-void Window::flipPixel(int x_index, int y_index) {
+void Window::clearDisplay() {
+    // Zero out framebuffer to completely clear it
+    // (8 pixels per byte) divide pixel count by 8 for byte amount.
+    std::memset(m_frameBuffer, 0, kPixelCount / 8);
+
+    // Update frame
+    m_pixelsModified = true;
+}
+
+// Start a position x, XOR x and the 7 following bits with rowData.
+// If the next 7 bits are in the following byte, continue flipping bits
+// in the second byte until the sprite byte is drawn.
+bool Window::drawRow(int x_index, int y_index, uint8_t rowData) {
+    // If position values exceed screen limits, wrap around.
+    x_index %= kScreenWidth;
+    y_index %= kScreenHeight;
+
+    // Return true if any set bit becomes unset
+    bool bitUnset = false;
+
     // Framebuffer has been modified, pixels await being drawn
     m_pixelsModified = true;
 
     // Y position is multiplied by the pitch (bytes per row)
     // Then we add the floor division of index / 8 to find the pixel's
     // corresponding byte (8 pixels per byte)
-    const uint8_t pos = (kScreenPitch * y_index) + x_index / 8;
-
-    // Pixel's corresponding byte to be modified
-    uint8_t& pixelsByte = m_frameBuffer[pos];
+    uint8_t pos = (kScreenPitch * y_index) + x_index / 8;
 
     // Determine bit index within byte
-    const uint8_t bitPos = x_index % 8;
+    uint8_t bitPos = (x_index % 8) + 1;
 
-    // Set a single bit in the position of the pixel
-    const uint8_t bitIndex = 1 << bitPos;
+    // Create XOR mask for first byte (unused bits are unset)
+    uint8_t firstXOR = rowData >> bitPos;
+    uint8_t& row = m_frameBuffer[pos];
 
-    // XOR the byte by our single set bit to swap the pixel
-    pixelsByte ^= bitIndex;
-}
+    // AND the current row with the mask.
+    // If two bits match, a set bit is flipped,T
+    // making the AND operation nonzero.
+    if ((row & firstXOR) != 0) {
+        bitUnset = true;
+    }
 
-void Window::clearDisplay() {
-    // Zero out framebuffer to completely clear it
-    std::memset(m_frameBuffer, 0, 256);
+    // XOR the first byte to flip pixels
+    row ^= firstXOR;
 
-    // Update frame
-    m_pixelsModified = true;
-    draw();
+    // The starting bit wasn't at the beginning of a byte,
+    // we must continue flipping bits in the next byte
+    // to complete the drawing of the sprite byte.
+    if (bitPos != 1) {
+        // Set up new mask
+        uint8_t secondXOR = rowData << (8 - bitPos);
+
+        // Move to the next byte
+        ++pos;
+        uint8_t& nextRow = m_frameBuffer[pos];
+
+        if ((nextRow & secondXOR) != 0) {
+            bitUnset = true;
+        }
+
+        // XOR the second byte to flip pixels
+        nextRow ^= secondXOR;
+    }
+
+    return bitUnset;
 }
 
 Window::~Window() {

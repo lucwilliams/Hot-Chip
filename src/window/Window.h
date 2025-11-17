@@ -7,6 +7,7 @@ class Window {
     static constexpr int kScreenWidth = 64;
     static constexpr int kScreenHeight = 32;
     static constexpr int kScreenUpscale = 25;
+    static constexpr int kPixelCount = kScreenWidth * kScreenHeight;
     static constexpr int kScreenPitch = kScreenWidth / 8;
 
     // SDL Window objects (nullptr initialised)
@@ -18,13 +19,13 @@ class Window {
     // Full resolution pixel array, 1 byte -> 8 pixels
     uint8_t* m_frameBuffer{};
 
-    // Only draw pixels to screen if the framebuffer has updated
+    // Only render pixels to the screen if the framebuffer has updated
     bool m_pixelsModified = false;
 
     public:
         Window();
         ~Window();
-        void draw();
-        void flipPixel(int x_index, int y_index);
+        void render();
         void clearDisplay();
+        bool drawRow(int x_index, int y_index, uint8_t rowData);
 };

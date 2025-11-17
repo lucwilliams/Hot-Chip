@@ -114,6 +114,7 @@ class Chip8 {
     void opcode6(uint16_t instruction);
     void opcode7(uint16_t instruction);
     void opcodeA(uint16_t instruction);
+    void opcodeD(uint16_t instruction);
 
     public:
         Chip8(const std::string& fileName, const Window& window, bool debugEnabled);
