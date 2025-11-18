@@ -18,7 +18,11 @@ void Chip8::opcode0(uint16_t instruction) {
             m_window.clearDisplay();
             break;
         case opcode::RETURN:
-            std::cerr << "[ERROR] 0xEE Instruction: RETURN not implemented yet." << std::endl;
+            // Pop return address from the stack
+            uint16_t returnAddress = m_stack[--m_stackSize];
+
+            m_PC = returnAddress;
+            m_PCUpdated = true;
             break;
     }
 }
@@ -27,6 +31,20 @@ void Chip8::opcode0(uint16_t instruction) {
 void Chip8::opcode1(uint16_t instruction) {
     // Update PC to new address from instruction
     m_PC = getAddressFromInstruction(instruction);
+    m_PCUpdated = true;
+}
+
+// CALL *NNN
+void Chip8::opcode2(uint16_t instruction) {
+    // Push return address to stack (next instruction)
+    m_stack[m_stackSize++] = m_PC + 2;
+
+    // Get pointer to subroutine address
+    uint16_t NNN = getAddressFromInstruction(instruction);
+
+    // Jump to dereferenced pointer
+    m_PC = m_memory[NNN];
+    m_PCUpdated = true;
 }
 
 // VX = NN
@@ -60,6 +78,15 @@ void Chip8::opcodeA(uint16_t instruction) {
 
     // Set I to NNN
     m_index = NNN;
+}
+
+// PC = V0 + NNN
+void Chip8::opcodeB(uint16_t instruction) {
+    uint8_t V0 = m_registers[0];
+    uint16_t NNN = getAddressFromInstruction(instruction);
+
+    // Set I to V0 + NNN
+    m_index = V0 + NNN;
 }
 
 // draw(Vx, Vy, N)

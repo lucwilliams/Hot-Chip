@@ -61,15 +61,22 @@ void Chip8::decode(uint16_t instruction) {
 	// Fourth nibble is the most significant
 	const uint8_t highestNibble = nibbleAt(instruction, 3);
 
+    // Keep track of whether PC has updated
+    m_PCUpdated = false;
+
 	// Map instruction to opcode function call
 	switch (highestNibble) {
 		case 0x0:
-			// CLEAR_DISPLAY and RETURN opcodes
+			// CLEAR_DISPLAY and RETURN instructions
 			opcode0(instruction);
 			break;
         case 0x1:
-            // GOTO NNN
+            // Jump to NNN
             opcode1(instruction);
+            break;
+        case 0x2:
+            // Call subroutine at NNN
+            opcode2(instruction);
             break;
 		case 0x6:
 			// Set register VX to NN
@@ -83,6 +90,10 @@ void Chip8::decode(uint16_t instruction) {
 			// Set I to NNN
 			opcodeA(instruction);
 			break;
+        case 0xB:
+            // Jump to NNN plus the value in V0
+            opcodeB(instruction);
+            break;
 		case 0xD:
 			// Draw sprite at (VX, VY) with height N
 			opcodeD(instruction);
@@ -92,8 +103,8 @@ void Chip8::decode(uint16_t instruction) {
 				std::cout << "[DEBUG] Opcode not implemented: " << instruction << std::endl;
 	}
 
-	// Do not increment PC for jump instruction
-    if (highestNibble != 0x1)
+	// Do not increment PC for jump or return instructions
+    if (!m_PCUpdated)
 		// Increment PC by 2 as instructions are two bytes in size
 		m_PC += 2;
 }

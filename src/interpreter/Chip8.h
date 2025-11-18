@@ -65,6 +65,14 @@ class Chip8 {
     // (start at first instruction of ROM)
     uint16_t m_PC{kROMOffset};
 
+    // Stack, just for subroutine return addresses
+    std::array<uint8_t, 16> m_stack{};
+    uint8_t m_stackSize {0};
+
+    // Internal bool to determine whether the PC is to be incremented.
+    // (don't increment the PC following jump or return instructions)
+    bool m_PCUpdated = false;
+
     // Window and m_debug are initialised in the constructor initialisation list
     Window m_window;
     const bool m_debug;
@@ -111,9 +119,11 @@ class Chip8 {
     // All emulated instruction opcodes by prefix
     void opcode0(uint16_t instruction);
     void opcode1(uint16_t instruction);
+    void opcode2(uint16_t instruction);
     void opcode6(uint16_t instruction);
     void opcode7(uint16_t instruction);
     void opcodeA(uint16_t instruction);
+    void opcodeB(uint16_t instruction);
     void opcodeD(uint16_t instruction);
 
     public:
