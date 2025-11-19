@@ -106,6 +106,7 @@ void Window::clearDisplay() {
 // Start a position x, XOR x and the 7 following bits with rowData.
 // If the next 7 bits are in the following byte, continue flipping bits
 // in the second byte until the sprite byte is drawn.
+// TODO: Fix drawing issues for some roms: See Timendus test.
 bool Window::drawRow(int x_index, int y_index, uint8_t rowData) {
     // If position values exceed screen limits, wrap around.
     x_index %= kScreenWidth;

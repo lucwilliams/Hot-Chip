@@ -13,12 +13,9 @@ Chip8::Chip8(const std::string& fileName, const Window& window, bool debugEnable
 	// Read ROM data
 	std::ifstream inFS;
 
-	// Add roms/ prefix to open from roms folder
-	std::string filePath = "roms/" + fileName;
-
 	// Open the file to read in binary
 	// Use ifstream::ate to position the get pointer at the end of file
-	inFS.open(filePath, std::ifstream::binary | std::ifstream::ate);
+	inFS.open(fileName, std::ifstream::binary | std::ifstream::ate);
 
 	if (inFS.is_open()) {
 		// Determine ROM size by checking the position of the get pointer
@@ -27,11 +24,11 @@ Chip8::Chip8(const std::string& fileName, const Window& window, bool debugEnable
 		// Check that ROM isn't greater than the space allocated to it in program memory
 		// 4096 - 512 (offset of ROM in memory)
 		if (m_ROMSize > (kMemorySize - kROMOffset))
-			throw std::runtime_error("ROM size exceeds maximum of 3584 bytes: " + filePath);
+			throw std::runtime_error("ROM size exceeds maximum of 3584 bytes: " + fileName);
 
 		// Assume files must be even as instructions are always two bytes in size
 		if (m_ROMSize % 2 != 0) {
-			throw std::runtime_error("ROM is not of even size! File may be corrupted: " + filePath);
+			throw std::runtime_error("ROM is not of even size! File may be corrupted: " + fileName);
 		}
 
 		// Return get pointer to start of file
@@ -45,7 +42,7 @@ Chip8::Chip8(const std::string& fileName, const Window& window, bool debugEnable
 		// Initialise font data. Start font data in position 0x50 (+80 bytes) as is conventional.
 		std::copy(kFontData.begin(), kFontData.end(), m_memory.begin() + kFontOffset);
 	} else {
-		throw std::runtime_error("Error opening ROM: " + filePath + ", " + std::strerror(errno));
+		throw std::runtime_error("Error opening ROM: " + fileName + ", " + std::strerror(errno));
 	}
 }
 

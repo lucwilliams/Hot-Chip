@@ -2,6 +2,8 @@
 
 Hot-Chip is a work-in-progress interpreter for the CHIP-8 programming language.
 
+![IBM splash logo running in Hot-Chip](assets/IBM%20Splash.png)
+
 ### Development progress:
     - Wrapper class for handling SDL window functionality ✔
     - Abstract registers and program memory (incl. stack and font data) ✔
@@ -24,3 +26,23 @@ You will need to install SDL2 to build this project:
   - e.g. `sudo apt install libsdl2-dev` for Ubuntu/Debian.
 
 SDL2 CMake build script provided by [tcbrindle](https://github.com/tcbrindle/sdl2-cmake-scripts) under the 2-Clause BSD Licence.
+
+### Build
+Substitute release for debug in either command to compile in debug mode.
+
+**Windows:**
+```
+cmake -S . -B build-release -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake --build build-release -- -j
+```
+
+**Linux:**
+```
+cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
+cmake --build build-release -- -j
+```
+
+### Run
+**Windows:** `Hot-Chip.exe roms/ibm.ch8`
+
+**Linux:** `./Hot-Chip roms/ibm.ch8`
