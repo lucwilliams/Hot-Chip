@@ -120,6 +120,7 @@ class Chip8 {
     void opcode0(uint16_t instruction);
     void opcode1(uint16_t instruction);
     void opcode2(uint16_t instruction);
+    void opcode3(uint16_t instruction);
     void opcode6(uint16_t instruction);
     void opcode7(uint16_t instruction);
     void opcodeA(uint16_t instruction);

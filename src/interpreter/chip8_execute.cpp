@@ -47,6 +47,18 @@ void Chip8::opcode2(uint16_t instruction) {
     m_PCUpdated = true;
 }
 
+// if (Vx == NN)
+void Chip8::opcode3(uint16_t instruction) {
+    // Get register value
+    uint8_t VX = m_registers[nibbleAt(instruction, 2)];
+
+    // Get 8-bit constant
+    uint8_t NN = getLowByte(instruction);
+
+    if (VX == NN)
+        m_PC += 2;
+}
+
 // VX = NN
 void Chip8::opcode6(uint16_t instruction) {
     // Get register number

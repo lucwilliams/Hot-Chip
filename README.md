@@ -28,21 +28,25 @@ You will need to install SDL2 to build this project:
 SDL2 CMake build script provided by [tcbrindle](https://github.com/tcbrindle/sdl2-cmake-scripts) under the 2-Clause BSD Licence.
 
 ### Build
-Substitute release for debug in either command to compile in debug mode.
+Substitute release for debug in both commands to compile in debug mode. [MinGW](https://www.msys2.org/) is required for compilation on Windows.
 
 **Windows:**
 ```
-cmake -S . -B build-release -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-cmake --build build-release -- -j
+cmake -S . -B build/release -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake --build build/release -- -j
 ```
 
 **Linux:**
 ```
-cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
-cmake --build build-release -- -j
+cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
+cmake --build build/release -- -j
 ```
 
 ### Run
-**Windows:** `Hot-Chip.exe roms/ibm.ch8`
+Substitute ibm.ch8 for Chip-8 ROM of your choice. 
+See [Timendus Tests](https://github.com/Timendus/chip8-test-suite/tree/main/bin) to download ROMs for testing.
+To prevent unexpected behaviour, Hot-Chip currently only runs ROMs of even file size, as odd file size ROMs are considered corrupted.
 
-**Linux:** `./Hot-Chip roms/ibm.ch8`
+**Windows:** `Hot-Chip.exe ibm.ch8`
+
+**Linux:** `./Hot-Chip ibm.ch8`

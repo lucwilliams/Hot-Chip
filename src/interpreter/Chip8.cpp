@@ -75,6 +75,10 @@ void Chip8::decode(uint16_t instruction) {
             // Call subroutine at NNN
             opcode2(instruction);
             break;
+        case 0x3:
+            // Skip next instruction if (Vx == NN)
+            opcode3(instruction);
+            break;
 		case 0x6:
 			// Set register VX to NN
 			opcode6(instruction);
