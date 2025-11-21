@@ -25,6 +25,10 @@ You will need to install SDL2 to build this project:
   - Install libSDL2 development binaries using your package manager.
   - e.g. `sudo apt install libsdl2-dev` for Ubuntu/Debian.
 
+- **MacOS:**
+  - Install SDL2 library files using [Homebrew](https://brew.sh/).
+  - `brew install sdl2`
+
 SDL2 CMake build script provided by [tcbrindle](https://github.com/tcbrindle/sdl2-cmake-scripts) under the 2-Clause BSD Licence.
 
 ### Build
@@ -36,7 +40,7 @@ cmake -S . -B build/release -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
 cmake --build build/release -- -j
 ```
 
-**Linux:**
+**Linux/MacOS:**
 ```
 cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
 cmake --build build/release -- -j
@@ -49,4 +53,4 @@ To prevent unexpected behaviour, Hot-Chip currently only runs ROMs of even file 
 
 **Windows:** `Hot-Chip.exe ibm.ch8`
 
-**Linux:** `./Hot-Chip ibm.ch8`
+**Linux/MacOS:** `./Hot-Chip ibm.ch8`

@@ -1,6 +1,7 @@
+.idea
+build
 cmake-build-debug
 cmake-build-release
 lib
 roms
-.idea
 Hot-Chip

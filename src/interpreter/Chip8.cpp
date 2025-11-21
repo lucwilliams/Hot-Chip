@@ -79,6 +79,14 @@ void Chip8::decode(uint16_t instruction) {
             // Skip next instruction if (Vx == NN)
             opcode3(instruction);
             break;
+		case 0x4:
+			// Skip next instruction if (Vx != NN)
+			opcode4(instruction);
+			break;
+		case 0x5:
+			// Skip next instruction if (Vx == Vy)
+			opcode5(instruction);
+			break;
 		case 0x6:
 			// Set register VX to NN
 			opcode6(instruction);
@@ -86,6 +94,10 @@ void Chip8::decode(uint16_t instruction) {
 		case 0x7:
 			// Add NN to VX
 			opcode7(instruction);
+			break;
+		case 0x9:
+			// Skip next instruction if (Vx != Vy)
+			opcode9(instruction);
 			break;
 		case 0xA:
 			// Set I to NNN

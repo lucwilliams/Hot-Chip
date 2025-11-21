@@ -59,6 +59,28 @@ void Chip8::opcode3(uint16_t instruction) {
         m_PC += 2;
 }
 
+// if (Vx != NN)
+void Chip8::opcode4(uint16_t instruction) {
+    // Get register value
+    uint8_t VX = m_registers[nibbleAt(instruction, 2)];
+
+    // Get 8-bit constant
+    uint8_t NN = getLowByte(instruction);
+
+    if (VX != NN)
+        m_PC += 2;
+}
+
+// if (Vx == Vy)
+void Chip8::opcode5(uint16_t instruction) {
+    // Get register value
+    uint8_t VX = m_registers[nibbleAt(instruction, 2)];
+    uint8_t VY = m_registers[nibbleAt(instruction, 1)];
+
+    if (VX == VY)
+        m_PC += 2;
+}
+
 // VX = NN
 void Chip8::opcode6(uint16_t instruction) {
     // Get register number
@@ -81,6 +103,16 @@ void Chip8::opcode7(uint16_t instruction) {
 
     // Add NN to VX
     m_registers[VX] += NN;
+}
+
+// if (Vx != Vy)
+void Chip8::opcode9(uint16_t instruction) {
+    // Get register value
+    uint8_t VX = m_registers[nibbleAt(instruction, 2)];
+    uint8_t VY = m_registers[nibbleAt(instruction, 1)];
+
+    if (VX != VY)
+        m_PC += 2;
 }
 
 // I = NNN

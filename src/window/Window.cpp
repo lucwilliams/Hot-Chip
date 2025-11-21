@@ -106,7 +106,6 @@ void Window::clearDisplay() {
 // Start a position x, XOR x and the 7 following bits with rowData.
 // If the next 7 bits are in the following byte, continue flipping bits
 // in the second byte until the sprite byte is drawn.
-// TODO: Fix drawing issues for some roms: See Timendus test.
 bool Window::drawRow(int x_index, int y_index, uint8_t rowData) {
     // If position values exceed screen limits, wrap around.
     x_index %= kScreenWidth;
@@ -124,7 +123,7 @@ bool Window::drawRow(int x_index, int y_index, uint8_t rowData) {
     uint8_t pos = (kScreenPitch * y_index) + x_index / 8;
 
     // Determine bit index within byte
-    uint8_t bitPos = (x_index % 8) + 1;
+    uint8_t bitPos = x_index % 8;
 
     // Create XOR mask for first byte (unused bits are unset)
     uint8_t firstXOR = rowData >> bitPos;
@@ -143,7 +142,7 @@ bool Window::drawRow(int x_index, int y_index, uint8_t rowData) {
     // The starting bit wasn't at the beginning of a byte,
     // we must continue flipping bits in the next byte
     // to complete the drawing of the sprite byte.
-    if (bitPos != 1) {
+    if (bitPos != 0) {
         // Set up new mask
         uint8_t secondXOR = rowData << (8 - bitPos);
 
