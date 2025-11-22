@@ -95,6 +95,10 @@ void Chip8::decode(uint16_t instruction) {
 			// Add NN to VX
 			opcode7(instruction);
 			break;
+        case 0x8:
+            // Math and bitwise operations on registers
+            opcode8(instruction);
+            break;
 		case 0x9:
 			// Skip next instruction if (Vx != Vy)
 			opcode9(instruction);

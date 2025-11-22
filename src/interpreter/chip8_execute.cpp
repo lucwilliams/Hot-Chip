@@ -1,8 +1,19 @@
 #include "Chip8.h"
 
+// For opcodes where the most significant nibble is not unique,
+// this enum maps the least significant nibbles to their unique instructions.
 enum class opcode : uint8_t {
     CLEAR_DISPLAY = 0xE0,
     RETURN = 0xEE,
+    REG_ASSIGNMENT = 0x0,
+    REG_OR = 0x1,
+    REG_AND = 0x2,
+    REG_XOR = 0x3,
+    REG_ADD = 0x4,
+    REG_SUBTRACT = 0x5,
+    REG_RSHIFT = 0x6,
+    REG_DIFFERENCE = 0x7,
+    REG_LSHIFT = 0xE
 };
 
 void Chip8::opcode0(uint16_t instruction) {
@@ -19,10 +30,10 @@ void Chip8::opcode0(uint16_t instruction) {
             break;
         case opcode::RETURN:
             // Pop return address from the stack
-            uint16_t returnAddress = m_stack[--m_stackSize];
-
-            m_PC = returnAddress;
+            m_PC = m_stack[--m_stackSize];
             m_PCUpdated = true;
+            break;
+        default:
             break;
     }
 }
@@ -103,6 +114,63 @@ void Chip8::opcode7(uint16_t instruction) {
 
     // Add NN to VX
     m_registers[VX] += NN;
+}
+
+
+/*
+ * REG_ASSIGNMENT = 0x0,
+ * REG_OR = 0x1,
+ * REG_AND = 0x2,
+ * REG_XOR = 0x3,
+ * REG_ADD = 0x4,
+ * REG_SUBTRACT = 0x5,
+ * REG_RSHIFT = 0x6,
+ * REG_DIFFERENCE = 0x7,
+ * REG_LSHIFT = 0xE
+*/
+void Chip8::opcode8(uint16_t instruction) {
+    const opcode lastNibble = static_cast<opcode>(
+        nibbleAt(instruction, 0)
+    );
+
+    uint8_t VY = nibbleAt(instruction, 1);
+    uint8_t VX = nibbleAt(instruction, 2);
+
+    switch (lastNibble) {
+        case opcode::REG_ASSIGNMENT:
+            m_registers[VX] = m_registers[VY];
+            break;
+        case opcode::REG_OR:
+            m_registers[VX] |= m_registers[VY];
+            break;
+        case opcode::REG_AND:
+            m_registers[VX] &= m_registers[VY];
+            break;
+        case opcode::REG_XOR:
+            m_registers[VX] ^= m_registers[VY];
+            break;
+        case opcode::REG_ADD:
+        {
+            // Use a 16-bit unsigned int to get the sum without overflow
+            uint16_t sum = m_registers[VX] + m_registers[VY];
+
+            // Does the sum of the two registers exceed the maximum for uint8_t?
+            if (sum > std::numeric_limits<uint8_t>::max()) {
+                m_registers[0xF] = 1;
+            } else {
+                m_registers[0xF] = 0;
+            }
+
+            m_registers[VX] += m_registers[VY];
+        }
+
+        case opcode::REG_SUBTRACT:break;
+        case opcode::REG_RSHIFT:break;
+        case opcode::REG_DIFFERENCE:break;
+        case opcode::REG_LSHIFT:break;
+        default:
+            break;
+    }
 }
 
 // if (Vx != Vy)
