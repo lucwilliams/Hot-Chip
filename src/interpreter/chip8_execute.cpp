@@ -117,17 +117,7 @@ void Chip8::opcode7(uint16_t instruction) {
 }
 
 
-/*
- * REG_ASSIGNMENT = 0x0,
- * REG_OR = 0x1,
- * REG_AND = 0x2,
- * REG_XOR = 0x3,
- * REG_ADD = 0x4,
- * REG_SUBTRACT = 0x5,
- * REG_RSHIFT = 0x6,
- * REG_DIFFERENCE = 0x7,
- * REG_LSHIFT = 0xE
-*/
+// Register arithmetic and bitwise operations
 void Chip8::opcode8(uint16_t instruction) {
     const opcode lastNibble = static_cast<opcode>(
         nibbleAt(instruction, 0)
@@ -161,13 +151,48 @@ void Chip8::opcode8(uint16_t instruction) {
                 m_registers[0xF] = 0;
             }
 
-            m_registers[VX] += m_registers[VY];
+            m_registers[VX] = sum;
         }
+        case opcode::REG_SUBTRACT:
+        {
+            // VX - VY Difference
+            // Use a 16-bit signed int to get the difference with underflow
+            int16_t difference = static_cast<int16_t>(m_registers[VX]) - m_registers[VY];
 
-        case opcode::REG_SUBTRACT:break;
-        case opcode::REG_RSHIFT:break;
-        case opcode::REG_DIFFERENCE:break;
-        case opcode::REG_LSHIFT:break;
+            // If the difference results in an underflow
+            if (difference < 0) {
+                m_registers[0xF] = 0;
+            } else {
+                m_registers[0xF] = 1;
+            }
+
+            m_registers[VX] = difference;
+            break;
+        }
+        case opcode::REG_RSHIFT:
+            m_registers[0xF] = m_registers[VX] >> 1;
+            m_registers[VX] >>= 1;
+            break;
+        case opcode::REG_DIFFERENCE:
+        {
+            // VY - VX Difference
+            // Use a 16-bit signed int to get the difference with underflow
+            int16_t difference = static_cast<int16_t>(m_registers[VY]) - m_registers[VX];
+
+            // If the difference results in an underflow
+            if (difference < 0) {
+                m_registers[0xF] = 0;
+            } else {
+                m_registers[0xF] = 1;
+            }
+
+            m_registers[VX] = difference;
+            break;
+        }
+        case opcode::REG_LSHIFT:
+            m_registers[0xF] = m_registers[VX] & kMSBMask;
+            m_registers[VX] <<= 1;
+            break;
         default:
             break;
     }

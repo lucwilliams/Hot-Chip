@@ -51,6 +51,10 @@ class Chip8 {
     // 111111111111 in binary
     static constexpr uint16_t kAddressMask = 0xFFF;
 
+    // The value used with AND to obtain the MSB of a byte
+    // 10000000 in binary
+    static constexpr uint16_t kMSBMask = 0x80;
+
     // Emulated memory
     std::array<uint8_t, kMemorySize> m_memory{};
     uint16_t m_ROMSize{};
