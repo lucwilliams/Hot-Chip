@@ -152,6 +152,7 @@ void Chip8::opcode8(uint16_t instruction) {
             }
 
             m_registers[VX] = sum;
+            break;
         }
         case opcode::REG_SUBTRACT:
         {
@@ -190,7 +191,7 @@ void Chip8::opcode8(uint16_t instruction) {
             break;
         }
         case opcode::REG_LSHIFT:
-            m_registers[0xF] = m_registers[VX] & kMSBMask;
+            m_registers[0xF] = (m_registers[VX] & kMSBMask) >> 8;
             m_registers[VX] <<= 1;
             break;
         default:
