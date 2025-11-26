@@ -13,7 +13,16 @@ enum class opcode : uint8_t {
     REG_SUBTRACT = 0x5,
     REG_RSHIFT = 0x6,
     REG_DIFFERENCE = 0x7,
-    REG_LSHIFT = 0xE
+    REG_LSHIFT = 0xE,
+    TIMER_GET_DELAY = 0x07,
+    TIMER_DELAY_SET = 0x15,
+    TIMER_SOUND_SET = 0x18,
+    GET_KEY = 0x0A,
+    ADD_TO_I = 0x1E,
+    LOAD_CHAR = 0x29,
+    BCD_VX = 0x33,
+    DUMP_REG = 0x55,
+    LOAD_REG = 0x65
 };
 
 void Chip8::opcode0(uint16_t instruction) {
@@ -256,5 +265,39 @@ void Chip8::opcodeD(uint16_t instruction) {
         m_registers[0xF] = 1;
     } else {
         m_registers[0xF] = 0;
+    }
+}
+
+/*
+ * TIMER_GET_DELAY = 0x07,
+ * TIMER_SET_DELAY = 0x15,
+ * TIMER_SET_SOUND = 0x18,
+ * GET_KEY = 0x0A,
+ * ADD_TO_I = 0x1E,
+ * LOAD_CHAR = 0x29,
+ * BCD_VX = 0x33,
+ * DUMP_REG = 0x55,
+ * LOAD_REG = 0x65
+*/
+void Chip8::opcodeF(uint16_t instruction) {
+    const opcode lowByte = static_cast<opcode>(
+        getLowByte(instruction)
+    );
+
+    uint8_t VX = nibbleAt(instruction, 2);
+
+    switch (lowByte) {
+        case opcode::TIMER_GET_DELAY:
+            m_registers[VX] = m_DelayTimer.readTimer();
+            break;
+        case opcode::TIMER_DELAY_SET:
+            m_DelayTimer.setTimer(m_registers[VX]);
+            break;
+        case opcode::TIMER_SOUND_SET:
+            m_SoundTimer.setTimer(m_registers[VX]);
+            break;
+        default:
+            // TODO: Implement remaining instructions
+            break;
     }
 }

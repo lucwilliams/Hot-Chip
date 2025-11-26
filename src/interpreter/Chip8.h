@@ -3,6 +3,8 @@
 #include <array>
 #include <iostream>
 #include "../window/Window.h"
+#include "timers/SoundTimer.h"
+#include "timers/DelayTimer.h"
 
 class Chip8 {
     // Character representations for 0-9 + A-F
@@ -81,6 +83,9 @@ class Chip8 {
     Window m_window;
     const bool m_debug;
 
+    SoundTimer m_SoundTimer;
+    DelayTimer m_DelayTimer;
+
     // Second step of the fetch/decode/execute loop
     void decode(uint16_t instruction);
 
@@ -134,6 +139,7 @@ class Chip8 {
     void opcodeA(uint16_t instruction);
     void opcodeB(uint16_t instruction);
     void opcodeD(uint16_t instruction);
+    void opcodeF(uint16_t instruction);
 
     public:
         Chip8(const std::string& fileName, const Window& window, bool debugEnabled);
