@@ -6,14 +6,14 @@
 #include <thread>
 
 class Timer {
-    // Use join thread for safety
-    std::jthread timerThread;
-
     protected:
+        // Use join thread for safety
+        std::jthread m_timerThread;
         uint8_t m_timer {0};
 
     public:
-        explicit Timer();
-        void setTimer(uint8_t value);
-        virtual void tickTimer() = 0;
+        virtual void tickTimer(std::stop_token stopToken) = 0;
+        inline void setTimer(uint8_t value) {
+            m_timer = value;
+        }
 };

@@ -26,11 +26,6 @@ Chip8::Chip8(const std::string& fileName, const Window& window, bool debugEnable
 		if (m_ROMSize > (kMemorySize - kROMOffset))
 			throw std::runtime_error("ROM size exceeds maximum of 3584 bytes: " + fileName);
 
-		// Assume files must be even as instructions are always two bytes in size
-		if (m_ROMSize % 2 != 0) {
-			throw std::runtime_error("ROM is not of even size! File may be corrupted: " + fileName);
-		}
-
 		// Return get pointer to start of file
 		inFS.seekg(0, std::ifstream::beg);
 
@@ -115,6 +110,10 @@ void Chip8::decode(uint16_t instruction) {
 			// Draw sprite at (VX, VY) with height N
 			opcodeD(instruction);
 			break;
+        case 0xF:
+            // Timers, keystrokes and misc memory instructions
+            opcodeF(instruction);
+            break;
 		default:
 			if (m_debug)
 				std::cout << "[DEBUG] Opcode not implemented: " << instruction << std::endl;

@@ -49,7 +49,6 @@ cmake --build build/release -- -j
 ### Run
 Substitute ibm.ch8 for Chip-8 ROM of your choice. 
 See [Timendus Tests](https://github.com/Timendus/chip8-test-suite/tree/main/bin) to download ROMs for testing.
-To prevent unexpected behaviour, Hot-Chip currently only runs ROMs of even file size, as odd file size ROMs are considered corrupted.
 
 **Windows:** `Hot-Chip.exe ibm.ch8`
 

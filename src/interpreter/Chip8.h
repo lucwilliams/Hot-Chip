@@ -40,6 +40,9 @@ class Chip8 {
     // The bit length of a nibble
     static constexpr uint8_t kNibbleLength = 4;
 
+    // Amount of emulated registers
+    static constexpr uint8_t kRegisterAmount = 16;
+
     // The value used with AND on a 16 bit instruction to obtain a nibble
     // 00001111 in binary
     static constexpr uint8_t kNibbleMask = 0xF;
@@ -62,7 +65,7 @@ class Chip8 {
     uint16_t m_ROMSize{};
 
     // Registers 0-9 + A-F (16 total)
-    std::array<uint8_t, 16> m_registers{};
+    std::array<uint8_t, kRegisterAmount> m_registers{};
 
     // Index/Address register (12 bits wide)
     uint16_t m_index{};
@@ -83,8 +86,8 @@ class Chip8 {
     Window m_window;
     const bool m_debug;
 
-    SoundTimer m_SoundTimer;
-    DelayTimer m_DelayTimer;
+    SoundTimer m_soundTimer;
+    DelayTimer m_delayTimer;
 
     // Second step of the fetch/decode/execute loop
     void decode(uint16_t instruction);
