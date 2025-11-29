@@ -32,7 +32,7 @@ void Chip8::opcode0(uint16_t instruction) {
 
 	switch (lowByte) {
         case opcode::CLEAR_DISPLAY:
-            if (m_debug)
+            if (kDebugEnabled)
                 std::cout << "[DEBUG] clearDisplay() executed. (instruction 0x00E0)" << std::endl;
 
             m_window.clearDisplay();
@@ -59,11 +59,8 @@ void Chip8::opcode2(uint16_t instruction) {
     // Push return address to stack (next instruction)
     m_stack[m_stackSize++] = m_PC + 2;
 
-    // Get pointer to subroutine address
-    uint16_t NNN = getAddressFromInstruction(instruction);
-
-    // Jump to dereferenced pointer
-    m_PC = m_memory[NNN];
+    // Update PC to new address from instruction
+    m_PC = getAddressFromInstruction(instruction);
     m_PCUpdated = true;
 }
 

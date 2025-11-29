@@ -3,8 +3,17 @@
 #include <array>
 #include <iostream>
 #include "../window/Window.h"
+#include "SafeArray.h"
 #include "timers/SoundTimer.h"
 #include "timers/DelayTimer.h"
+
+
+// Compile with -DDEBUG for debug output
+#ifdef DEBUG
+    static constexpr bool kDebugEnabled = true;
+#else
+    static constexpr bool kDebugEnabled = false;
+#endif
 
 class Chip8 {
     // Character representations for 0-9 + A-F
@@ -31,7 +40,9 @@ class Chip8 {
     // Size of emulated memory (4096)
     static constexpr uint16_t kMemorySize = 0x1000;
 
-    // Offset where ROM is loaded into emulated memory (512)
+    // Offset where ROM is loaded into emulated memory (512).
+    // Although they're called ROMs, programs can actually
+    // write to their data in memory.
     static constexpr uint16_t kROMOffset = 0x200;
 
     // Offset where font data is loaded into emulated memory (80)
@@ -61,11 +72,11 @@ class Chip8 {
     static constexpr uint16_t kMSBMask = 0x80;
 
     // Emulated memory
-    std::array<uint8_t, kMemorySize> m_memory{};
+    SafeArray<kMemorySize, kDebugEnabled> m_memory{};
     uint16_t m_ROMSize{};
 
     // Registers 0-9 + A-F (16 total)
-    std::array<uint8_t, kRegisterAmount> m_registers{};
+    SafeArray<kRegisterAmount, kDebugEnabled> m_registers{};
 
     // Index/Address register (12 bits wide)
     uint16_t m_index{};
@@ -82,9 +93,8 @@ class Chip8 {
     // (don't increment the PC following jump or return instructions)
     bool m_PCUpdated = false;
 
-    // Window and m_debug are initialised in the constructor initialisation list
+    // Window is initialised in the constructor initialisation list
     Window m_window;
-    const bool m_debug;
 
     SoundTimer m_soundTimer;
     DelayTimer m_delayTimer;
@@ -145,6 +155,6 @@ class Chip8 {
     void opcodeF(uint16_t instruction);
 
     public:
-        Chip8(const std::string& fileName, const Window& window, bool debugEnabled);
+        Chip8(const std::string& fileName, const Window& window);
         void start();
 };

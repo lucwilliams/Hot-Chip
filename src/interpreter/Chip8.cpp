@@ -6,9 +6,8 @@
 #include <iomanip>
 #include "Chip8.h"
 
-Chip8::Chip8(const std::string& fileName, const Window& window, bool debugEnabled)
+Chip8::Chip8(const std::string& fileName, const Window& window)
 	: m_window{window}
-	, m_debug{debugEnabled}
 {
 	// Read ROM data
 	std::ifstream inFS;
@@ -43,7 +42,7 @@ Chip8::Chip8(const std::string& fileName, const Window& window, bool debugEnable
 
 void Chip8::decode(uint16_t instruction) {
 	// Output instruction for debug
-	if (m_debug)
+	if (kDebugEnabled)
 		// Output in hexadecimal form with zero padding if necessary
 		std::cout << "[DEBUG] Decoded Instruction: "
 			<< std::setw(4) << std::setfill('0')
@@ -115,7 +114,7 @@ void Chip8::decode(uint16_t instruction) {
             opcodeF(instruction);
             break;
 		default:
-			if (m_debug)
+			if (kDebugEnabled)
 				std::cout << "[DEBUG] Opcode not implemented: " << instruction << std::endl;
 	}
 

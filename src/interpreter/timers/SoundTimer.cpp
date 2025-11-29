@@ -58,6 +58,8 @@ SoundTimer::SoundTimer() {
 
 SoundTimer::~SoundTimer() {
     m_timerThread.request_stop();
+    m_timerThread.join();
+
     SDL_CloseAudioDevice(m_audioDevice);
 }
 
