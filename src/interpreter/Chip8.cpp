@@ -101,10 +101,14 @@ void Chip8::decode(uint16_t instruction) {
 			// Set I to NNN
 			opcodeA(instruction);
 			break;
-        case 0xB:
-            // Jump to NNN plus the value in V0
-            opcodeB(instruction);
-            break;
+		case 0xB:
+			// Jump to NNN plus the value in V0
+			opcodeB(instruction);
+			break;
+		case 0xC:
+			// Generate a random number in range of 0 -> NN (max 255)
+			opcodeC(instruction);
+			break;
 		case 0xD:
 			// Draw sprite at (VX, VY) with height N
 			opcodeD(instruction);
@@ -125,14 +129,6 @@ void Chip8::decode(uint16_t instruction) {
 }
 
 void Chip8::start() {
-	SDL_Event event{};
-
-	// Whether user has killed program
-	bool running = true;
-
-	// If all instructions have been executed in the ROM
-	bool finished = false;
-
 	// The memory location of the ROM's final valid instruction
 	// Subtract two since instructions are two bytes in size.
 	const uint16_t finalInstruction {

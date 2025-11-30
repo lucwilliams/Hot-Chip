@@ -48,7 +48,7 @@ SoundTimer::SoundTimer() {
         &m_obtained, 0
     );
 
-    if (m_audioDevice == 0)
+    if (!m_audioDevice)
         throw std::runtime_error(
             "Failed to initialise audio device: " + std::string(SDL_GetError())
         );
@@ -57,6 +57,7 @@ SoundTimer::SoundTimer() {
 }
 
 SoundTimer::~SoundTimer() {
+    // Make sure timer thread has completed before closing audio device
     m_timerThread.request_stop();
     m_timerThread.join();
 
@@ -74,11 +75,14 @@ void SoundTimer::tickTimer(std::stop_token stopToken) {
         if (m_timer > 0) {
             // Beep! (unpause)
             SDL_PauseAudioDevice(m_audioDevice, kAudioPlay);
+            isBeeping = true;
 
             // Decrement timer
             --m_timer;
-        } else {
+        // Only pause if speaker is currently beeping
+        } else if (isBeeping) {
             SDL_PauseAudioDevice(m_audioDevice, kAudioPause);
+            isBeeping = false;
         }
     }
 }

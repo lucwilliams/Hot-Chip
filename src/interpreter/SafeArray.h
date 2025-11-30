@@ -6,7 +6,7 @@
 
 template<std::uint16_t m_size, bool debugEnabled>
 class SafeArray {
-    std::array<uint8_t, m_size> m_data;
+    std::array<uint8_t, m_size> m_data{};
 
     public:
         inline uint8_t& operator[](uint16_t index) {

@@ -2,6 +2,7 @@
 
 #include <array>
 #include <iostream>
+#include <random>
 #include "../window/Window.h"
 #include "SafeArray.h"
 #include "timers/SoundTimer.h"
@@ -93,6 +94,16 @@ class Chip8 {
     // (don't increment the PC following jump or return instructions)
     bool m_PCUpdated = false;
 
+    // Mersenne Twister algorithm used for RNG
+    std::mt19937 m_mersenneTwister{
+        static_cast<std::mt19937::result_type>(
+            std::chrono::steady_clock::now().time_since_epoch().count()
+        )
+    };
+
+    // Generate a random value from 0 to 255 (max value of uint8_t)
+    std::uniform_int_distribution<uint8_t> m_randUint8{ 0, 255 };
+
     // Window is initialised in the constructor initialisation list
     Window m_window;
 
@@ -151,6 +162,7 @@ class Chip8 {
     void opcode9(uint16_t instruction);
     void opcodeA(uint16_t instruction);
     void opcodeB(uint16_t instruction);
+    void opcodeC(uint16_t instruction);
     void opcodeD(uint16_t instruction);
     void opcodeF(uint16_t instruction);
 

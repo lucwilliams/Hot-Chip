@@ -15,6 +15,8 @@ class SoundTimer : public Timer {
     // https://wiki.libsdl.org/SDL2/SDL_OpenAudioDevice
     SDL_AudioDeviceID m_audioDevice;
 
+    bool isBeeping = false;
+
     public:
         SoundTimer();
         ~SoundTimer();

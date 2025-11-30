@@ -17,12 +17,14 @@ enum class opcode : uint8_t {
     TIMER_GET_DELAY = 0x07,
     TIMER_DELAY_SET = 0x15,
     TIMER_SOUND_SET = 0x18,
-    GET_KEY = 0x0A,
+    AWAIT_KEY = 0x0A,
     ADD_TO_I = 0x1E,
     LOAD_CHAR = 0x29,
     BCD_VX = 0x33,
     DUMP_REG = 0x55,
-    LOAD_REG = 0x65
+    LOAD_REG = 0x65,
+    KEY_HELD = 0x9E,
+    KEY_NOT_HELD = 0xA1
 };
 
 void Chip8::opcode0(uint16_t instruction) {
@@ -232,6 +234,14 @@ void Chip8::opcodeB(uint16_t instruction) {
 
     // Set I to V0 + NNN
     m_index = V0 + NNN;
+}
+
+// rand(0, NN), NN < 256
+void Chip8::opcodeC(uint16_t instruction) {
+    uint8_t& VX = m_registers[nibbleAt(instruction, 2)];
+    uint8_t NN = getLowByte(instruction);
+
+    VX = m_randUint8(m_mersenneTwister) % NN;
 }
 
 // draw(Vx, Vy, N)
