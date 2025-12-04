@@ -4,9 +4,10 @@
 
 // Delay timer is read+write
 class DelayTimer : public Timer {
+    void tickTimer(std::stop_token stopToken) override;
+
     public:
         DelayTimer();
         ~DelayTimer();
-        void tickTimer(std::stop_token stopToken) override;
         uint8_t readTimer();
 };

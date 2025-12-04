@@ -113,19 +113,18 @@ void Chip8::decode(uint16_t instruction) {
 			// Draw sprite at (VX, VY) with height N
 			opcodeD(instruction);
 			break;
+        case 0xE:
+            // Skip instruction for key press
+            opcodeE(instruction);
+            break;
         case 0xF:
             // Timers, keystrokes and misc memory instructions
             opcodeF(instruction);
             break;
 		default:
 			if (kDebugEnabled)
-				std::cout << "[DEBUG] Opcode not implemented: " << instruction << std::endl;
+				std::cout << "[DEBUG] Unknown opcode: " << instruction << std::endl;
 	}
-
-	// Do not increment PC for jump or return instructions
-    if (!m_PCUpdated)
-		// Increment PC by 2 as instructions are two bytes in size
-		m_PC += 2;
 }
 
 void Chip8::start() {
@@ -135,46 +134,78 @@ void Chip8::start() {
 		static_cast<uint16_t>(kROMOffset + m_ROMSize - 2)
 	};
 
+	// Whether all instructions have been executed
+	bool finished = false;
+
 	// Fetch/decode/execute loop
-	while (running) {
-		// Check all SDL events (acts more like a for loop on &event)
-		while (SDL_PollEvent(&event)) {
-			if (event.type == SDL_QUIT) {
-				running = false;
-				break;
-			}
-		}
-
-		if (!running)
-			break;
-
+	while (!m_windowClosed) {
 		if (finished) {
 			// Sleep until the user closes the window
-			SDL_WaitEvent(&event);
+			SDL_WaitEvent(&m_event);
+
+			if (m_event.type == SDL_QUIT) {
+				m_windowClosed = true;
+				return;
+			}
 		} else {
 			// Execute 256 instructions each frame.
 			uint8_t instructionsExecuted{0};
 			while (instructionsExecuted < 255) {
+				// Get user inputs to update keyboard state
+				// before executing instructions
+				while (SDL_PollEvent(&m_event)) {
+					SDL_Scancode& scanCode = m_event.key.keysym.scancode;
+
+					if (m_event.type == SDL_QUIT) {
+						m_windowClosed = true;
+
+						// Set key state to pressed
+					} else if (m_event.type == SDL_KEYDOWN) {
+                        setKeyState(scanCode, true);
+						// Set key state to not pressed
+					} else if (m_event.type == SDL_KEYUP) {
+                        setKeyState(scanCode, false);
+					}
+				}
+
+				/*
+				 * Terminates program after user closes the window.
+				 *
+				 * This condition can be true outside the event loop above
+				 * if the user closes the window in the AWAIT_KEY instruction
+				 * which also polls input events.
+				*/
+				if (m_windowClosed)
+					return;
+
 				if (m_PC > finalInstruction) {
 					// All instructions have completed
 					finished = true;
 					break;
-				} else if (m_PC + 1 < kMemorySize)  {
+				}
+				else if (m_PC + 1 < kMemorySize) {
 					// Fetch instruction:
 					// Our memory is 8 bits, but an instruction is 16 bits.
 					// We concatenate the byte at PC with the byte that follows to form one uint16_t
 					uint16_t instruction = static_cast<uint16_t>(m_memory[m_PC]) << 8 | m_memory[m_PC + 1];
 					decode(instruction);
+
+					// Do not increment PC for jump or return instructions
+					if (!m_PCUpdated)
+						// Increment PC by 2 as instructions are two bytes in size
+						m_PC += 2;
+
 					++instructionsExecuted;
-				} else {
+				}
+				else {
 					throw std::runtime_error(
 						"Cannot run out-of-bounds instruction at position: "
 						+ std::to_string(m_PC) + "."
 					);
 				}
 			}
-
-            m_window.render();
 		}
+
+		m_window.render();
 	}
 }

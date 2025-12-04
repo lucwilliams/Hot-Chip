@@ -10,7 +10,7 @@ static constexpr uint16_t kSampleCount = 1024;
 
 // Function to produce our beep sound to pass to the output audio device
 // https://wiki.libsdl.org/SDL2/SDL_AudioCallback
-[[maybe_unused]] static void audioCallback(void* userdata, uint8_t* stream, int len) {
+static void audioCallback(void* userdata, uint8_t* stream, int len) {
     auto* obtained = static_cast<SDL_AudioSpec*>(userdata);
     static int samplePos = 0;
 

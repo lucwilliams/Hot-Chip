@@ -14,6 +14,8 @@ enum class opcode : uint8_t {
     REG_RSHIFT = 0x6,
     REG_DIFFERENCE = 0x7,
     REG_LSHIFT = 0xE,
+    IS_KEY_PRESSED = 0x9E,
+    IS_KEY_NOT_PRESSED = 0xA1,
     TIMER_GET_DELAY = 0x07,
     TIMER_DELAY_SET = 0x15,
     TIMER_SOUND_SET = 0x18,
@@ -22,9 +24,7 @@ enum class opcode : uint8_t {
     LOAD_CHAR = 0x29,
     BCD_VX = 0x33,
     DUMP_REG = 0x55,
-    LOAD_REG = 0x65,
-    KEY_HELD = 0x9E,
-    KEY_NOT_HELD = 0xA1
+    LOAD_REG = 0x65
 };
 
 void Chip8::opcode0(uint16_t instruction) {
@@ -45,7 +45,8 @@ void Chip8::opcode0(uint16_t instruction) {
             m_PCUpdated = true;
             break;
         default:
-            break;
+            if (kDebugEnabled)
+                std::cout << "[DEBUG] Unknown instruction: " << instruction << std::endl;
     }
 }
 
@@ -204,7 +205,8 @@ void Chip8::opcode8(uint16_t instruction) {
             VX <<= 1;
             break;
         default:
-            break;
+            if (kDebugEnabled)
+                std::cout << "[DEBUG] Unknown instruction: " << instruction << std::endl;
     }
 }
 
@@ -278,17 +280,33 @@ void Chip8::opcodeD(uint16_t instruction) {
     }
 }
 
-/*
- * TIMER_GET_DELAY = 0x07,
- * TIMER_SET_DELAY = 0x15,
- * TIMER_SET_SOUND = 0x18,
- * GET_KEY = 0x0A,
- * ADD_TO_I = 0x1E,
- * LOAD_CHAR = 0x29,
- * BCD_VX = 0x33,
- * DUMP_REG = 0x55,
- * LOAD_REG = 0x65
-*/
+// Skip next instruction if key stored in VX is pressed
+void Chip8::opcodeE(uint16_t instruction) {
+    const opcode lowByte = static_cast<opcode>(
+        getLowByte(instruction)
+    );
+
+    uint8_t VX = m_registers[nibbleAt(instruction, 2)];
+
+    switch (lowByte) {
+        case opcode::IS_KEY_PRESSED:
+            if (m_keyStates[VX])
+                // Instructions are two bytes, increment by two
+                m_PC += 2;
+
+            break;
+        case opcode::IS_KEY_NOT_PRESSED:
+            if (!m_keyStates[VX])
+                m_PC += 2;
+
+            break;
+        default:
+            if (kDebugEnabled)
+                std::cout << "[DEBUG] Unknown instruction: " << instruction << std::endl;
+    }
+}
+
+// Timers, keystrokes and misc memory instructions
 void Chip8::opcodeF(uint16_t instruction) {
     const opcode lowByte = static_cast<opcode>(
         getLowByte(instruction)
@@ -306,9 +324,29 @@ void Chip8::opcodeF(uint16_t instruction) {
         case opcode::TIMER_SOUND_SET:
             m_soundTimer.setTimer(VX);
             break;
-        case opcode::GET_KEY:
-            VX = 0x1;
+        case opcode::AWAIT_KEY: {
+            bool keyPressed = false;
+
+            // Block execution until a key is pressed
+            while (!keyPressed) {
+                SDL_WaitEvent(&m_event);
+                SDL_Scancode& scanCode = m_event.key.keysym.scancode;
+
+                if (m_event.type == SDL_QUIT) {
+                    m_windowClosed = true;
+                    return;
+                } else if (m_event.type == SDL_KEYDOWN) {
+                    // Set VX to key
+                    VX = scanCodeToPos(scanCode);
+
+                    // Set key state to pressed
+                    setKeyState(scanCode, true);
+                    keyPressed = true;
+                }
+            }
+
             break;
+        }
         case opcode::ADD_TO_I:
             m_index += VX;
             break;
@@ -338,6 +376,7 @@ void Chip8::opcodeF(uint16_t instruction) {
             break;
         }
         default:
-            break;
+            if (kDebugEnabled)
+                std::cout << "[DEBUG] Unknown instruction: " << instruction << std::endl;
     }
 }

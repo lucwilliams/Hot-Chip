@@ -14,24 +14,24 @@ class SafeArray {
             // for an out-of-bounds access.
             static uint8_t dummy {0};
 
-            if (index < m_size)
+            if (index < m_size) {
                 return m_data[index];
-            else if (debugEnabled)
-                /*
-                 * Print debug message for out-of-bounds access.
-                 *
-                 * Out of bounds index into an array (operator[]) usually
-                 * segfaults, or for the .at() method it will throw an out_of_range
-                 * exception. In the case of emulation, we assume it's an error in
-                 * the ROM and chose to continue execution rather than terminating.
-                 */
+            } else if (debugEnabled) {
+                // Print debug message for out-of-bounds access.
                 std::cout
                     << "[DEBUG] Out-of-bounds memory access at "
                     << index << " for size " << m_size
                     << std::endl;
 
-                // Just return a reference to an unused variable
-                return dummy;
+            }
+
+            /*
+             * Out of bounds index into an array (operator[]) usually
+             * segfaults, or for the .at() method it will throw an out_of_range
+             * exception. In the case of emulation, we will assume it's an error in
+             * the ROM and chose to continue execution rather than terminating.
+             */
+            return dummy;
         }
 
         // Allow .begin() method from std::array to be used for our SafeArray

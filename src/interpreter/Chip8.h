@@ -3,17 +3,17 @@
 #include <array>
 #include <iostream>
 #include <random>
+#include <bitset>
 #include "../window/Window.h"
 #include "SafeArray.h"
 #include "timers/SoundTimer.h"
 #include "timers/DelayTimer.h"
 
-
 // Compile with -DDEBUG for debug output
 #ifdef DEBUG
-    static constexpr bool kDebugEnabled = true;
+    inline constexpr bool kDebugEnabled = true;
 #else
-    static constexpr bool kDebugEnabled = false;
+    inline constexpr bool kDebugEnabled = false;
 #endif
 
 class Chip8 {
@@ -110,6 +110,18 @@ class Chip8 {
     SoundTimer m_soundTimer;
     DelayTimer m_delayTimer;
 
+    // Whether the user has closed the window
+    bool m_windowClosed = false;
+
+    // Boolean array representing pressed state of all 16 keypad inputs
+    std::bitset<16> m_keyStates{};
+
+    // For handling user input events
+    SDL_Event m_event;
+
+    // Stores the last pressed character for AWAIT_KEY
+    uint8_t m_lastPressed = 0;
+
     // Second step of the fetch/decode/execute loop
     void decode(uint16_t instruction);
 
@@ -149,6 +161,49 @@ class Chip8 {
         return address;
     }
 
+
+    static inline uint8_t scanCodeToPos(SDL_Scancode scanCode) {
+        uint8_t pos{0};
+
+        /*
+         * All 16 buttons used for the Chip-8 keypad.
+         * Order of enum maps to array index.
+         *
+         * Scancodes are used over key names for
+         * consistency across keyboards layouts.
+         */
+        switch(scanCode) {
+            case SDL_SCANCODE_1: pos = 0x0; break;
+            case SDL_SCANCODE_2: pos = 0x1; break;
+            case SDL_SCANCODE_3: pos = 0x2; break;
+            case SDL_SCANCODE_4: pos = 0x3; break;
+            case SDL_SCANCODE_Q: pos = 0x4; break;
+            case SDL_SCANCODE_W: pos = 0x5; break;
+            case SDL_SCANCODE_E: pos = 0x6; break;
+            case SDL_SCANCODE_R: pos = 0x7; break;
+            case SDL_SCANCODE_A: pos = 0x8; break;
+            case SDL_SCANCODE_S: pos = 0x9; break;
+            case SDL_SCANCODE_D: pos = 0xA; break;
+            case SDL_SCANCODE_F: pos = 0xB; break;
+            case SDL_SCANCODE_Z: pos = 0xC; break;
+            case SDL_SCANCODE_X: pos = 0xD; break;
+            case SDL_SCANCODE_C: pos = 0xE; break;
+            case SDL_SCANCODE_V: pos = 0xF; break;
+
+            // Unused key
+            default: break;
+        }
+
+        return pos;
+    }
+
+
+    inline void setKeyState(SDL_Scancode scanCode, bool state) {
+        // Position in m_keyStates array
+        uint8_t pos = scanCodeToPos(scanCode);
+        m_keyStates[pos] = state;
+    }
+
     // All emulated instruction opcodes by prefix
     void opcode0(uint16_t instruction);
     void opcode1(uint16_t instruction);
@@ -164,6 +219,7 @@ class Chip8 {
     void opcodeB(uint16_t instruction);
     void opcodeC(uint16_t instruction);
     void opcodeD(uint16_t instruction);
+    void opcodeE(uint16_t instruction);
     void opcodeF(uint16_t instruction);
 
     public:
