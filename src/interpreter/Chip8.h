@@ -87,7 +87,7 @@ class Chip8 {
     uint16_t m_PC{kROMOffset};
 
     // Stack, just for subroutine return addresses
-    std::array<uint8_t, 16> m_stack{};
+    std::array<uint16_t, 16> m_stack{};
     uint8_t m_stackSize {0};
 
     // Internal bool to determine whether the PC is to be incremented.

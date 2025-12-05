@@ -118,7 +118,7 @@ void Chip8::decode(uint16_t instruction) {
             opcodeE(instruction);
             break;
         case 0xF:
-            // Timers, keystrokes and misc memory instructions
+            // Timers, keystrokes and misc memory instructions involving VX
             opcodeF(instruction);
             break;
 		default:

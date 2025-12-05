@@ -11,9 +11,9 @@ enum class opcode : uint8_t {
     REG_XOR = 0x3,
     REG_ADD = 0x4,
     REG_SUBTRACT = 0x5,
-    REG_RSHIFT = 0x6,
     REG_DIFFERENCE = 0x7,
     REG_LSHIFT = 0xE,
+    REG_RSHIFT = 0x6,
     IS_KEY_PRESSED = 0x9E,
     IS_KEY_NOT_PRESSED = 0xA1,
     TIMER_GET_DELAY = 0x07,
@@ -154,56 +154,65 @@ void Chip8::opcode8(uint16_t instruction) {
             // Use a 16-bit unsigned int to get the sum without overflow
             uint16_t sum = VX + VY;
 
+            VX = sum;
+
             // Does the sum of the two registers exceed the maximum for uint8_t?
             if (sum > std::numeric_limits<uint8_t>::max()) {
                 VF = 1;
             } else {
                 VF = 0;
             }
-
-            VX = sum;
             break;
         }
         case opcode::REG_SUBTRACT:
         {
-            // VX - VY Difference
-            // Use a 16-bit signed int to get the difference with underflow
-            int16_t difference = static_cast<int16_t>(VX) - VY;
+            bool underflow = (VX < VY);
+            VX -= VY;
 
-            // If the difference results in an underflow
-            if (difference < 0) {
+            // Does the difference result in an underflow?
+            if (underflow) {
                 VF = 0;
             } else {
                 VF = 1;
             }
-
-            VX = difference;
             break;
         }
-        case opcode::REG_RSHIFT:
-            VF = VX >> 1;
-            VX >>= 1;
-            break;
         case opcode::REG_DIFFERENCE:
         {
-            // VY - VX Difference
-            // Use a 16-bit signed int to get the difference with underflow
-            int16_t difference = static_cast<int16_t>(VY) - VX;
+            bool underflow = (VY < VX);
+            VX = VY - VX;
 
-            // If the difference results in an underflow
-            if (difference < 0) {
+            // Does the difference result in an underflow?
+            if (underflow) {
                 VF = 0;
             } else {
                 VF = 1;
             }
 
-            VX = difference;
             break;
         }
-        case opcode::REG_LSHIFT:
-            VF = (VX & kMSBMask) >> 8;
+        case opcode::REG_LSHIFT: {
+            // QUIRK
+            VX = VY;
+
+            uint8_t VX_MSB = (VX & kMSBMask) >> 7;
             VX <<= 1;
+
+            // Store MSB of VX in VF
+            VF = VX_MSB;
             break;
+        }
+        case opcode::REG_RSHIFT: {
+            // QUIRK
+            VX = VY;
+
+            uint8_t VX_LSB = VX & 1;
+            VX >>= 1;
+
+            // Store LSB of VX in VF
+            VF = VX_LSB;
+            break;
+        }
         default:
             if (kDebugEnabled)
                 std::cout << "[DEBUG] Unknown instruction: " << instruction << std::endl;
@@ -306,13 +315,22 @@ void Chip8::opcodeE(uint16_t instruction) {
     }
 }
 
-// Timers, keystrokes and misc memory instructions
+// Timers, keystrokes and misc memory instructions involving VX
 void Chip8::opcodeF(uint16_t instruction) {
     const opcode lowByte = static_cast<opcode>(
         getLowByte(instruction)
     );
 
-    uint8_t& VX = m_registers[nibbleAt(instruction, 2)];
+    uint8_t VXRegisterNumber = nibbleAt(instruction, 2);
+
+    // TODO: Implement register access safety across program
+    if (VXRegisterNumber > 0xF)
+        throw std::runtime_error(
+            "Out-of-bounds register access for FXXX instruction. "
+            + std::to_string(instruction) + "."
+        );
+
+    uint8_t& VX = m_registers[VXRegisterNumber];
 
     switch (lowByte) {
         case opcode::TIMER_GET_DELAY:
@@ -354,27 +372,24 @@ void Chip8::opcodeF(uint16_t instruction) {
             // Each font consists of five bytes.
             m_index = m_memory[kFontOffset + (VX * 5)];
             break;
-        case opcode::BCD_VX: {
+        case opcode::BCD_VX:
             // Express VX's value in BCD format (hundreds, tens, ones)
             m_memory[m_index] = VX / 100;
-            m_memory[m_index + 1] = VX % 100;
+            m_memory[m_index + 1] = (VX % 100) / 10;
             m_memory[m_index + 2] = VX % 10;
             break;
-        }
-        case opcode::DUMP_REG: {
+        case opcode::DUMP_REG:
             // Store the value of all registers starting at the address of I
-            for (uint8_t x = 0; x < kRegisterAmount; ++x) {
+            for (uint8_t x = 0; x <= VXRegisterNumber; ++x) {
                 m_memory[m_index + x] = m_registers[x];
             }
             break;
-        }
-        case opcode::LOAD_REG: {
+        case opcode::LOAD_REG:
             // Load the values starting at the address of I into the registers
-            for (uint8_t x = 0; x < kRegisterAmount; ++x) {
+            for (uint8_t x = 0; x <= VXRegisterNumber; ++x) {
                 m_registers[x] = m_memory[m_index + x];
             }
             break;
-        }
         default:
             if (kDebugEnabled)
                 std::cout << "[DEBUG] Unknown instruction: " << instruction << std::endl;
