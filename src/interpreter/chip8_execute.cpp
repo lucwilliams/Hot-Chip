@@ -1,7 +1,9 @@
 #include "Chip8.h"
 
-// For opcodes where the most significant nibble is not unique,
-// this enum maps the least significant nibbles to their unique instructions.
+/*
+ * For opcodes where the most significant nibble is not unique,
+ * this enum maps the least significant nibbles to their unique instructions.
+ */
 enum class opcode : uint8_t {
     CLEAR_DISPLAY = 0xE0,
     RETURN = 0xEE,
@@ -34,15 +36,21 @@ void Chip8::opcode0(uint16_t instruction) {
 
 	switch (lowByte) {
         case opcode::CLEAR_DISPLAY:
-            if (kDebugEnabled)
-                std::cout << "[DEBUG] clearDisplay() executed. (instruction 0x00E0)" << std::endl;
-
             m_window.clearDisplay();
+            m_window.render();
             break;
         case opcode::RETURN:
-            // Pop return address from the stack
-            m_PC = m_stack[--m_stackSize];
-            m_PCUpdated = true;
+            if (m_stackSize > 0) {
+                // Pop return address from the stack
+                m_PC = m_stack[--m_stackSize];
+                m_PCUpdated = true;
+            } else {
+                if (kDebugEnabled)
+                    std::cout <<
+                        "[ERROR] Return attempted from outside of subroutine. "
+                        << instruction << std::endl;
+            }
+
             break;
         default:
             if (kDebugEnabled)
@@ -59,12 +67,21 @@ void Chip8::opcode1(uint16_t instruction) {
 
 // CALL *NNN
 void Chip8::opcode2(uint16_t instruction) {
-    // Push return address to stack (next instruction)
-    m_stack[m_stackSize++] = m_PC + 2;
+    // Prevent out-of-bounds stack access.
+    // Stack limited to a maximum subroutine depth of 16.
+    if (m_stackSize < 16) {
+        // Push return address to stack (next instruction)
+        m_stack[m_stackSize++] = m_PC + 2;
 
-    // Update PC to new address from instruction
-    m_PC = getAddressFromInstruction(instruction);
-    m_PCUpdated = true;
+        // Update PC to new address from instruction
+        m_PC = getAddressFromInstruction(instruction);
+        m_PCUpdated = true;
+    } else {
+        // Output error and continue execution without calling subroutine
+        std::cout <<
+            "[ERROR] Maximum stack depth exceeded!"
+            << instruction << std::endl;
+    }
 }
 
 // if (Vx == NN)
@@ -287,6 +304,8 @@ void Chip8::opcodeD(uint16_t instruction) {
     } else {
         VF = 0;
     }
+
+    m_window.render();
 }
 
 // Skip next instruction if key stored in VX is pressed
@@ -322,14 +341,6 @@ void Chip8::opcodeF(uint16_t instruction) {
     );
 
     uint8_t VXRegisterNumber = nibbleAt(instruction, 2);
-
-    // TODO: Implement register access safety across program
-    if (VXRegisterNumber > 0xF)
-        throw std::runtime_error(
-            "Out-of-bounds register access for FXXX instruction. "
-            + std::to_string(instruction) + "."
-        );
-
     uint8_t& VX = m_registers[VXRegisterNumber];
 
     switch (lowByte) {
@@ -343,23 +354,38 @@ void Chip8::opcodeF(uint16_t instruction) {
             m_soundTimer.setTimer(VX);
             break;
         case opcode::AWAIT_KEY: {
+            // Store the key once pressed to await its release
+            SDL_Scancode pressedKey;
             bool keyPressed = false;
+            bool keyReleased = false;
 
-            // Block execution until a key is pressed
-            while (!keyPressed) {
+            // Block execution until a key is pressed and released
+            while (!keyReleased) {
                 SDL_WaitEvent(&m_event);
                 SDL_Scancode& scanCode = m_event.key.keysym.scancode;
 
                 if (m_event.type == SDL_QUIT) {
                     m_windowClosed = true;
                     return;
-                } else if (m_event.type == SDL_KEYDOWN) {
+                }
+
+                if (!keyPressed) {
+                    if (m_event.type == SDL_KEYDOWN) {
+                        // Set VX to key
+                        VX = scanCodeToPos(scanCode);
+
+                        // Save pressed key to await release
+                        keyPressed = true;
+                        pressedKey = scanCode;
+                    }
+                } else if (
+                    // If the pressed key has been raised
+                    m_event.type == SDL_KEYUP &&
+                    scanCode == pressedKey
+                ) {
                     // Set VX to key
                     VX = scanCodeToPos(scanCode);
-
-                    // Set key state to pressed
-                    setKeyState(scanCode, true);
-                    keyPressed = true;
+                    keyReleased = true;
                 }
             }
 

@@ -3,7 +3,6 @@
 #include <cstring>
 #include <iostream>
 #include <algorithm>
-#include <iomanip>
 #include "Chip8.h"
 
 Chip8::Chip8(const std::string& fileName, const Window& window)
@@ -41,14 +40,6 @@ Chip8::Chip8(const std::string& fileName, const Window& window)
 }
 
 void Chip8::decode(uint16_t instruction) {
-	// Output instruction for debug
-	if (kDebugEnabled)
-		// Output in hexadecimal form with zero padding if necessary
-		std::cout << "[DEBUG] Decoded Instruction: "
-			<< std::setw(4) << std::setfill('0')
-			<< std::hex << std::uppercase
-			<< instruction << std::endl;
-
 	// Fourth nibble is the most significant
 	const uint8_t highestNibble = nibbleAt(instruction, 3);
 
@@ -148,64 +139,54 @@ void Chip8::start() {
 				return;
 			}
 		} else {
-			// Execute 256 instructions each frame.
-			uint8_t instructionsExecuted{0};
-			while (instructionsExecuted < 255) {
-				// Get user inputs to update keyboard state
-				// before executing instructions
-				while (SDL_PollEvent(&m_event)) {
-					SDL_Scancode& scanCode = m_event.key.keysym.scancode;
+            // Get user inputs to update keyboard state
+            // before executing instructions
+            while (SDL_PollEvent(&m_event)) {
+                SDL_Scancode& scanCode = m_event.key.keysym.scancode;
 
-					if (m_event.type == SDL_QUIT) {
-						m_windowClosed = true;
+                if (m_event.type == SDL_QUIT) {
+                    m_windowClosed = true;
 
-						// Set key state to pressed
-					} else if (m_event.type == SDL_KEYDOWN) {
-                        setKeyState(scanCode, true);
-						// Set key state to not pressed
-					} else if (m_event.type == SDL_KEYUP) {
-                        setKeyState(scanCode, false);
-					}
-				}
+                    // Set key state to pressed
+                } else if (m_event.type == SDL_KEYDOWN) {
+                    setKeyState(scanCode, true);
 
-				/*
-				 * Terminates program after user closes the window.
-				 *
-				 * This condition can be true outside the event loop above
-				 * if the user closes the window in the AWAIT_KEY instruction
-				 * which also polls input events.
-				*/
-				if (m_windowClosed)
-					return;
+                    // Set key state to not pressed
+                } else if (m_event.type == SDL_KEYUP) {
+                    setKeyState(scanCode, false);
+                }
+            }
 
-				if (m_PC > finalInstruction) {
-					// All instructions have completed
-					finished = true;
-					break;
-				}
-				else if (m_PC + 1 < kMemorySize) {
-					// Fetch instruction:
-					// Our memory is 8 bits, but an instruction is 16 bits.
-					// We concatenate the byte at PC with the byte that follows to form one uint16_t
-					uint16_t instruction = static_cast<uint16_t>(m_memory[m_PC]) << 8 | m_memory[m_PC + 1];
-					decode(instruction);
+            /*
+             * Terminates program after user closes the window.
+             *
+             * This condition can be true outside the event loop above
+             * if the user closes the window in the AWAIT_KEY instruction
+             * which also polls input events.
+            */
+            if (m_windowClosed)
+                return;
 
-					// Do not increment PC for jump or return instructions
-					if (!m_PCUpdated)
-						// Increment PC by 2 as instructions are two bytes in size
-						m_PC += 2;
+            if (m_PC > finalInstruction) {
+                // All instructions have completed
+                finished = true;
+            } else if (m_PC + 1 < kMemorySize) {
+                // Fetch instruction:
+                // Our memory is 8 bits, but an instruction is 16 bits.
+                // We concatenate the byte at PC with the byte that follows to form one uint16_t
+                uint16_t instruction = static_cast<uint16_t>(m_memory[m_PC]) << 8 | m_memory[m_PC + 1];
+                decode(instruction);
 
-					++instructionsExecuted;
-				}
-				else {
-					throw std::runtime_error(
-						"Cannot run out-of-bounds instruction at position: "
-						+ std::to_string(m_PC) + "."
-					);
-				}
-			}
+                // Do not increment PC for jump or return instructions
+                if (!m_PCUpdated)
+                    // Increment PC by 2 as instructions are two bytes in size
+                    m_PC += 2;
+            } else {
+                throw std::runtime_error(
+                    "Cannot run out-of-bounds instruction at position: "
+                    + std::to_string(m_PC) + "."
+                );
+            }
 		}
-
-		m_window.render();
 	}
 }

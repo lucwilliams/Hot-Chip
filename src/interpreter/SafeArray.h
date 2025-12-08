@@ -19,7 +19,7 @@ class SafeArray {
             } else if (debugEnabled) {
                 // Print debug message for out-of-bounds access.
                 std::cout
-                    << "[DEBUG] Out-of-bounds memory access at "
+                    << "[ERROR] Out-of-bounds memory access at "
                     << index << " for size " << m_size
                     << std::endl;
 

@@ -96,7 +96,7 @@ void Window::render() {
 
 void Window::clearDisplay() {
     // Zero out framebuffer to completely clear it
-    // (8 pixels per byte) divide pixel count by 8 for byte amount.
+    // Divide pixel count by 8 for byte amount. (8 pixels per byte)
     std::memset(m_frameBuffer, 0, kPixelCount / 8);
 
     // Update frame

@@ -11,8 +11,7 @@ Hot-Chip is a work-in-progress interpreter for the CHIP-8 programming language.
     - Implement simple instructions to set/read registers and draw to display ✔
     - Emulated timers and sound ✔ 
     - Complete initial draft implementation of full instruction set ✔
-    - Debug and test all instructions for correct behaviour ✔
-    - Address SDL input issues
+    - Debug and test all instructions for correct behaviour
     - Long term: GUI (qt or ImGUI?), 3DS port? 👀
 
 The end goal for the program is a fully functional cross-platform CHIP-8 interpreter that can be compiled to Windows, Linux and macOS.
