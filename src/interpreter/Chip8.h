@@ -1,13 +1,12 @@
 #pragma once
 
 #include <array>
-#include <iostream>
 #include <random>
 #include <bitset>
 #include "../window/Window.h"
-#include "SafeArray.h"
 #include "timers/SoundTimer.h"
 #include "timers/DelayTimer.h"
+#include "SafeArray.h"
 
 // Compile with -DDEBUG for debug output
 #ifdef DEBUG
@@ -105,7 +104,7 @@ class Chip8 {
     std::uniform_int_distribution<uint8_t> m_randUint8{ 0, 255 };
 
     // Window is initialised in the constructor initialisation list
-    Window m_window;
+    Window& m_window;
 
     SoundTimer m_soundTimer;
     DelayTimer m_delayTimer;
@@ -117,7 +116,7 @@ class Chip8 {
     std::bitset<16> m_keyStates{};
 
     // For handling user input events
-    SDL_Event m_event;
+    SDL_Event m_event{};
 
     // Second step of the fetch/decode/execute loop
     void decode(uint16_t instruction);
@@ -125,7 +124,7 @@ class Chip8 {
     // -- Helper functions for manipulating opcodes --
 
     // Helper function to obtain a 4 bit nibble by position from a 16 bit opcode
-    static inline uint8_t nibbleAt(uint16_t instruction, uint8_t position) {
+    static uint8_t nibbleAt(uint16_t instruction, uint8_t position) {
         // Position is an index starting at zero and
         // must not exceed the index of the fourth nibble.
         if (position > kNibbleLength - 1)
@@ -145,7 +144,7 @@ class Chip8 {
     }
 
     // Helper function to obtain a 12 bit address (NNN) from a 16 bit opcode
-    static inline uint8_t getLowByte(uint16_t instruction) {
+    static uint8_t getLowByte(uint16_t instruction) {
         const auto lowByte = static_cast<uint8_t>(
             instruction & kLowerByteMask
         );
@@ -153,13 +152,12 @@ class Chip8 {
     }
 
     // Helper function to obtain a 12 bit address (NNN) from a 16 bit opcode
-    static inline uint16_t getAddressFromInstruction(uint16_t instruction) {
+    static uint16_t getAddressFromInstruction(uint16_t instruction) {
         const uint16_t address = instruction & kAddressMask;
         return address;
     }
 
-
-    static inline uint8_t scanCodeToPos(SDL_Scancode scanCode) {
+    static uint8_t scanCodeToPos(SDL_Scancode scanCode) {
         uint8_t pos{0};
 
         /*
@@ -194,8 +192,7 @@ class Chip8 {
         return pos;
     }
 
-
-    inline void setKeyState(SDL_Scancode scanCode, bool state) {
+    void setKeyState(SDL_Scancode scanCode, bool state) {
         // Position in m_keyStates array
         uint8_t pos = scanCodeToPos(scanCode);
         m_keyStates[pos] = state;
@@ -220,6 +217,6 @@ class Chip8 {
     void opcodeF(uint16_t instruction);
 
     public:
-        Chip8(const std::string& fileName, const Window& window);
+        Chip8(const std::string& fileName, Window& window);
         void start();
 };

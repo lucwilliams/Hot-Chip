@@ -3,9 +3,11 @@
 #include <cstring>
 #include <iostream>
 #include <algorithm>
+#include <imgui.h>
+#include <imgui_impl_sdl2.h>
 #include "Chip8.h"
 
-Chip8::Chip8(const std::string& fileName, const Window& window)
+Chip8::Chip8(const std::string& fileName, Window& window)
 	: m_window{window}
 {
 	// Read ROM data
@@ -130,6 +132,9 @@ void Chip8::start() {
 
 	// Fetch/decode/execute loop
 	while (!m_windowClosed) {
+		// Set to true if user interacts with window during event loop
+		bool IOTriggered = false;
+
 		if (finished) {
 			// Sleep until the user closes the window
 			SDL_WaitEvent(&m_event);
@@ -142,6 +147,10 @@ void Chip8::start() {
             // Get user inputs to update keyboard state
             // before executing instructions
             while (SDL_PollEvent(&m_event)) {
+            	// Pass event to ImGUI
+            	ImGui_ImplSDL2_ProcessEvent(&m_event);
+
+            	// Scancode of keypress (null for non-keypress)
                 SDL_Scancode& scanCode = m_event.key.keysym.scancode;
 
                 if (m_event.type == SDL_QUIT) {
@@ -155,6 +164,8 @@ void Chip8::start() {
                 } else if (m_event.type == SDL_KEYUP) {
                     setKeyState(scanCode, false);
                 }
+
+            	IOTriggered = true;
             }
 
             /*
@@ -166,6 +177,23 @@ void Chip8::start() {
             */
             if (m_windowClosed)
                 return;
+
+			// Create struct to pass read-only debug info to Window
+			Chip8MemoryView debugInfo {
+				m_memory.getDataView(),
+				m_registers.getDataView(),
+				m_PC,
+				m_index
+			};
+
+			m_window.drawDebugWindow(debugInfo);
+
+			// Keep ImGUI context up-to-date by re-rendering UI on user interaction
+			if (IOTriggered) {
+				m_window.render();
+			} else {
+				ImGui::EndFrame();
+			}
 
             if (m_PC > finalInstruction) {
                 // All instructions have completed
@@ -190,3 +218,4 @@ void Chip8::start() {
 		}
 	}
 }
+

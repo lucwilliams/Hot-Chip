@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SDL.h>
+#include "../interpreter/Chip8MemoryView.h"
 
 class Window {
     // Window resolution constants
@@ -19,6 +20,9 @@ class Window {
     // Full resolution pixel array, 1 byte -> 8 pixels
     uint8_t* m_frameBuffer{};
 
+    // Whether the ImGUI debug window has been created
+    bool m_debugCreated = false;
+
     // Only render pixels to the screen if the framebuffer has updated
     bool m_pixelsModified = false;
 
@@ -27,5 +31,6 @@ class Window {
         ~Window();
         void render();
         void clearDisplay();
+        void drawDebugWindow(Chip8MemoryView debugInfo);
         bool drawRow(int x_index, int y_index, uint8_t rowData);
 };

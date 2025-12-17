@@ -1,6 +1,9 @@
-#include <cstdint>
 #include <iostream>
 #include <cstring>
+#include <imgui.h>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_sdlrenderer2.h>
+#include <../../lib/imgui-addons/imgui_memory_editor.h>
 #include "Window.h"
 
 // Initialise program window
@@ -26,7 +29,7 @@ Window::Window() {
     }
 
     m_renderer = SDL_CreateRenderer(
-        m_window, -1, SDL_RENDERER_PRESENTVSYNC
+        m_window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED
     );
 
     if (!m_renderer) {
@@ -43,13 +46,21 @@ Window::Window() {
     // Use nearest-neighbour scaling
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 
+    // Initialise ImGUI for debugging
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplSDL2_InitForSDLRenderer(m_window, m_renderer);
+    ImGui_ImplSDLRenderer2_Init(m_renderer);
+
+    // Initialise texture surface for 2D rendering
     // Use SDL_PIXELFORMAT_INDEX1LSB for 1-bit pixels
     m_surface = SDL_CreateRGBSurfaceWithFormat(
         0, kScreenWidth, kScreenHeight,
         SDL_BITSPERPIXEL(SDL_PIXELFORMAT_INDEX1MSB),
         SDL_PIXELFORMAT_INDEX1MSB
     );
-
 
     if (!m_surface) {
         std::cerr << "Error creating surface." << std::endl;
@@ -76,22 +87,37 @@ Window::Window() {
 }
 
 void Window::render() {
-    // Only render when the framebuffer has been modified
+    // Update ImGUI
+    ImGui::Render();
+
+    // Ensure UI fits in window
+    ImGuiIO& io = ImGui::GetIO();
+    SDL_RenderSetScale(
+        m_renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y
+    );
+
+    // Only update display texture when the framebuffer has been modified
     if (m_pixelsModified) {
-        // Clean up last render
-        SDL_RenderClear(m_renderer);
         SDL_DestroyTexture(m_texture);
 
         // Create new texture. m_surface->pixels is our framebuffer
         m_texture = SDL_CreateTextureFromSurface(m_renderer, m_surface);
 
-        // Copy and render
-        SDL_RenderCopy(m_renderer, m_texture, nullptr, nullptr);
-        SDL_RenderPresent(m_renderer);
-
         // Pixels in framebuffer queue have been drawn
         m_pixelsModified = false;
     }
+
+    // Clean up last render
+    SDL_RenderClear(m_renderer);
+
+    // Copy texture to renderer
+    SDL_RenderCopy(m_renderer, m_texture, nullptr, nullptr);
+
+    // Update ImGUI
+    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), m_renderer);
+
+    // Present
+    SDL_RenderPresent(m_renderer);
 }
 
 void Window::clearDisplay() {
@@ -101,6 +127,33 @@ void Window::clearDisplay() {
 
     // Update frame
     m_pixelsModified = true;
+}
+
+// Chip8MemoryView only contains references so it can be copied as an argument
+void Window::drawDebugWindow(Chip8MemoryView debugInfo) {
+    // Update ImGUI UI
+    ImGui_ImplSDLRenderer2_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+
+    // Set default size of memory viewer
+    ImGui::SetNextWindowSize({564, 439}, ImGuiCond_FirstUseEver);
+
+    ImGui::Begin("Chip-8 Memory");
+
+    std::span<uint8_t>& memory = debugInfo.memory;
+    static MemoryEditor memoryViewer;
+    memoryViewer.DrawContents(
+        memory.data(), memory.size()
+    );
+
+    ImGui::End();
+
+    // Always render the ImGUI window for the first time
+    if (!m_debugCreated) {
+        m_debugCreated = true;
+        render();
+    }
 }
 
 // Start a position x, XOR x and the 7 following bits with rowData.
@@ -162,8 +215,14 @@ bool Window::drawRow(int x_index, int y_index, uint8_t rowData) {
 }
 
 Window::~Window() {
+    // Close ImGUI
+    ImGui_ImplSDLRenderer2_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+
+    // Close SDL
     SDL_DestroyTexture(m_texture);
-    SDL_DestroyWindow(m_window);
     SDL_DestroyRenderer(m_renderer);
+    SDL_DestroyWindow(m_window);
     SDL_Quit();
 }

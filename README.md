@@ -11,14 +11,14 @@ Hot-Chip is a work-in-progress interpreter for the CHIP-8 programming language.
     - Implement simple instructions to set/read registers and draw to display ✔
     - Emulated timers and sound ✔ 
     - Complete initial draft implementation of full instruction set ✔
+    - Create debug tooling using ImGUI for UI (WIP)
     - Debug and test all instructions for correct behaviour
-    - Long term: GUI (qt or ImGUI?), 3DS port? 👀
+    - Long term: 3DS port? 👀
 
 The end goal for the program is a fully functional cross-platform CHIP-8 interpreter that can be compiled to Windows, Linux and macOS.
 
 ### Dependencies
-Hot-Chip uses [SDL2](https://www.libsdl.org/) (licensed under the [zlib license](https://www.libsdl.org/license.php)). 
-
+Hot-Chip uses [SDL2](https://www.libsdl.org/) (licensed under the [zlib license](https://www.libsdl.org/license.php)).\
 You will need to install SDL2 to build this project:
 - **Windows (MinGW):** 
   - Download *SDL2-devel-2.32.8-mingw.zip* from the [SDL releases](https://github.com/libsdl-org/SDL/releases/tag/release-2.32.8).
@@ -32,7 +32,8 @@ You will need to install SDL2 to build this project:
   - Install SDL2 library files using [Homebrew](https://brew.sh/).
   - `brew install sdl2`
 
-SDL2 CMake build script provided by [tcbrindle](https://github.com/tcbrindle/sdl2-cmake-scripts) under the 2-Clause BSD Licence.
+SDL2 CMake build script is provided by [tcbrindle](https://github.com/tcbrindle/sdl2-cmake-scripts) under the 2-Clause BSD License.\
+[Dear ImGUI](https://github.com/ocornut/imgui) is used in this project under the MIT license.
 
 ### Build
 Substitute release for debug in both commands to compile in debug mode. [MinGW](https://www.msys2.org/) is required for compilation on Windows.
