@@ -260,8 +260,9 @@ void Chip8::opcodeB(uint16_t instruction) {
     uint8_t V0 = m_registers[0];
     uint16_t NNN = getAddressFromInstruction(instruction);
 
-    // Set I to V0 + NNN
-    m_index = V0 + NNN;
+    // Set PC to V0 + NNN
+    m_PC = V0 + NNN;
+    m_PCUpdated = true;
 }
 
 // rand(0, NN), NN < 256
@@ -284,9 +285,7 @@ void Chip8::opcodeD(uint16_t instruction) {
 
     // Draw each row for height N
     for (uint8_t y {0}; y < height; ++y) {
-        uint8_t rowData = static_cast<uint8_t>(
-            m_memory[m_index + y]
-        );
+        uint8_t rowData = m_memory[m_index + y];
 
         // Update the framebuffer to draw this rowData of pixels
         bool rowBitFlip = m_window.drawRow(

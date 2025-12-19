@@ -35,17 +35,23 @@ You will need to install SDL2 to build this project:
 SDL2 CMake build script is provided by [tcbrindle](https://github.com/tcbrindle/sdl2-cmake-scripts) under the 2-Clause BSD License.\
 [Dear ImGUI](https://github.com/ocornut/imgui) is used in this project under the MIT license.
 
+### Clone repository and dependencies:
+```shell
+git clone --recursive https://github.com/lucwilliams/Hot-Chip.git
+cd Hot-Chip
+```
+
 ### Build
 Substitute release for debug in both commands to compile in debug mode. [MinGW](https://www.msys2.org/) is required for compilation on Windows.
 
 **Windows:**
-```
+```shell
 cmake -S . -B build/release -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
 cmake --build build/release -- -j
 ```
 
 **Linux/MacOS:**
-```
+```shell
 cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
 cmake --build build/release -- -j
 ```
