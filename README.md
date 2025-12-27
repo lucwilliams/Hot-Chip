@@ -18,22 +18,7 @@ Hot-Chip is a work-in-progress interpreter for the CHIP-8 programming language.
 The end goal for the program is a fully functional cross-platform CHIP-8 interpreter that can be compiled to Windows, Linux and macOS.
 
 ### Dependencies
-Hot-Chip uses [SDL2](https://www.libsdl.org/) (licensed under the [zlib license](https://www.libsdl.org/license.php)).\
-You will need to install SDL2 to build this project:
-- **Windows (MinGW):** 
-  - Download *SDL2-devel-2.32.8-mingw.zip* from the [SDL releases](https://github.com/libsdl-org/SDL/releases/tag/release-2.32.8).
-  - Extract into `lib/` in project root.
-
-- **Linux:**
-  - Install libSDL2 development binaries using your package manager.
-  - e.g. `sudo apt install libsdl2-dev` for Ubuntu/Debian.
-
-- **MacOS:**
-  - Install SDL2 library files using [Homebrew](https://brew.sh/).
-  - `brew install sdl2`
-
-SDL2 CMake build script is provided by [tcbrindle](https://github.com/tcbrindle/sdl2-cmake-scripts) under the 2-Clause BSD License.\
-[Dear ImGUI](https://github.com/ocornut/imgui) is used in this project under the MIT license.
+Hot-Chip uses [SDL2](https://www.libsdl.org/) under the [zlib](https://www.libsdl.org/license.php) license and [Dear ImGUI](https://github.com/ocornut/imgui), under the [MIT](https://github.com/ocornut/imgui/blob/master/LICENSE.txt) license.
 
 ### Clone repository and dependencies:
 ```shell
@@ -42,18 +27,13 @@ cd Hot-Chip
 ```
 
 ### Build
-Substitute release for debug in both commands to compile in debug mode. [MinGW](https://www.msys2.org/) is required for compilation on Windows.
+Substitute release for debug in both commands to compile in debug mode. Requires [ninja](https://ninja-build.org/) to be installed.
 
-**Windows:**
-```shell
-cmake -S . -B build/release -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-cmake --build build/release -- -j
-```
+Compiles on Windows, Linux and macOS.
 
-**Linux/MacOS:**
 ```shell
-cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
-cmake --build build/release -- -j
+cmake -S . -B build/release -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build/release
 ```
 
 ### Run
