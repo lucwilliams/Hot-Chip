@@ -7,6 +7,7 @@ class Window {
     // Window resolution constants
     static constexpr int kScreenWidth = 64;
     static constexpr int kScreenHeight = 32;
+    static constexpr int kScreenViewPortUpscale = 15;
     static constexpr int kScreenUpscale = 25;
     static constexpr int kPixelCount = kScreenWidth * kScreenHeight;
     static constexpr int kScreenPitch = kScreenWidth / 8;
@@ -20,9 +21,6 @@ class Window {
     // Full resolution pixel array, 1 byte -> 8 pixels
     uint8_t* m_frameBuffer{};
 
-    // Whether the ImGUI debug window has been created
-    bool m_debugCreated = false;
-
     // Only render pixels to the screen if the framebuffer has updated
     bool m_pixelsModified = false;
 
@@ -31,6 +29,6 @@ class Window {
         ~Window();
         void render();
         void clearDisplay();
-        void drawDebugWindow(Chip8MemoryView debugInfo);
+        void drawUI(Chip8MemoryView debugInfo);
         bool drawRow(int x_index, int y_index, uint8_t rowData);
 };

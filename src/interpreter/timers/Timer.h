@@ -13,7 +13,7 @@ class Timer {
     protected:
         // Use join thread for safety
         std::jthread m_timerThread;
-        uint8_t m_timer {0};
+        std::atomic<uint8_t> m_timer {0};
 
     public:
         inline void setTimer(uint8_t value) {

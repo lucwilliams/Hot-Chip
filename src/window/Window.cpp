@@ -3,7 +3,7 @@
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_sdlrenderer2.h>
-#include <../../lib/imgui-addons/imgui_memory_editor.h>
+#include <imgui_memory_editor.h>
 #include "Window.h"
 
 // Initialise program window
@@ -29,7 +29,7 @@ Window::Window() {
     }
 
     m_renderer = SDL_CreateRenderer(
-        m_window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED
+        m_window, -1, SDL_RENDERER_ACCELERATED
     );
 
     if (!m_renderer) {
@@ -51,6 +51,10 @@ Window::Window() {
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
 
+    // Enable docking in ImGUI
+    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    // Use SDL Renderer for ImGUI
     ImGui_ImplSDL2_InitForSDLRenderer(m_window, m_renderer);
     ImGui_ImplSDLRenderer2_Init(m_renderer);
 
@@ -87,15 +91,6 @@ Window::Window() {
 }
 
 void Window::render() {
-    // Update ImGUI
-    ImGui::Render();
-
-    // Ensure UI fits in window
-    ImGuiIO& io = ImGui::GetIO();
-    SDL_RenderSetScale(
-        m_renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y
-    );
-
     // Only update display texture when the framebuffer has been modified
     if (m_pixelsModified) {
         SDL_DestroyTexture(m_texture);
@@ -106,18 +101,6 @@ void Window::render() {
         // Pixels in framebuffer queue have been drawn
         m_pixelsModified = false;
     }
-
-    // Clean up last render
-    SDL_RenderClear(m_renderer);
-
-    // Copy texture to renderer
-    SDL_RenderCopy(m_renderer, m_texture, nullptr, nullptr);
-
-    // Update ImGUI
-    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), m_renderer);
-
-    // Present
-    SDL_RenderPresent(m_renderer);
 }
 
 void Window::clearDisplay() {
@@ -129,31 +112,84 @@ void Window::clearDisplay() {
     m_pixelsModified = true;
 }
 
-// Chip8MemoryView only contains references so it can be copied as an argument
-void Window::drawDebugWindow(Chip8MemoryView debugInfo) {
+/*
+ * drawUI() renders all ImGUI windows, including debug windows and
+ * the emulated viewport. The render() function is responsible
+ * for updating the emulated display to be used for this function.
+ *
+ * Chip8MemoryView only contains references so it can be copied as an argument.
+ */
+void Window::drawUI(Chip8MemoryView debugInfo) {
     // Update ImGUI UI
     ImGui_ImplSDLRenderer2_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
+    // Create full window dockspace
+    ImGui::DockSpaceOverViewport(
+        0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode
+    );
+
+    // Set default size of emulated display
+    ImGui::SetNextWindowSize(
+        // Scaled width and height
+        {
+            kScreenWidth * kScreenViewPortUpscale,
+            kScreenHeight * kScreenViewPortUpscale
+        },
+        ImGuiCond_FirstUseEver
+    );
+
+    // Create window for emulated display
+    ImGui::Begin(
+        "Chip-8",
+        nullptr,
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoScrollWithMouse
+    );
+
+    ImVec2 size = ImGui::GetContentRegionAvail();
+
+    ImGui::Image(
+        m_texture,
+        size,
+        ImVec2(0, 0),
+        ImVec2(1, 1)
+    );
+
+    ImGui::End();
+
     // Set default size of memory viewer
     ImGui::SetNextWindowSize({564, 439}, ImGuiCond_FirstUseEver);
 
+    // Create memory viewer window
     ImGui::Begin("Chip-8 Memory");
+    static MemoryEditor memoryViewer;
 
     std::span<uint8_t>& memory = debugInfo.memory;
-    static MemoryEditor memoryViewer;
     memoryViewer.DrawContents(
         memory.data(), memory.size()
     );
 
     ImGui::End();
 
-    // Always render the ImGUI window for the first time
-    if (!m_debugCreated) {
-        m_debugCreated = true;
-        render();
-    }
+    // Update ImGUI
+    ImGui::Render();
+
+    // Ensure UI fits in window
+    ImGuiIO& io = ImGui::GetIO();
+    SDL_RenderSetScale(
+        m_renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y
+    );
+
+    // Clean up last render
+    SDL_RenderClear(m_renderer);
+
+    // Update ImGUI
+    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), m_renderer);
+
+    // Present
+    SDL_RenderPresent(m_renderer);
 }
 
 // Start a position x, XOR x and the 7 following bits with rowData.

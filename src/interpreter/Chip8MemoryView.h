@@ -8,6 +8,6 @@
 struct Chip8MemoryView {
     std::span<uint8_t> memory;
     std::span<uint8_t> registers;
-    const uint16_t getPC;
-    const uint16_t getIndexRegister;
+    const uint16_t PC;
+    const uint16_t index;
 };

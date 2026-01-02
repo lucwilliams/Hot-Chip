@@ -132,9 +132,6 @@ void Chip8::start() {
 
 	// Fetch/decode/execute loop
 	while (!m_windowClosed) {
-		// Set to true if user interacts with window during event loop
-		bool IOTriggered = false;
-
 		if (finished) {
 			// Sleep until the user closes the window
 			SDL_WaitEvent(&m_event);
@@ -156,16 +153,14 @@ void Chip8::start() {
                 if (m_event.type == SDL_QUIT) {
                     m_windowClosed = true;
 
-                    // Set key state to pressed
+                // Update key state to pressed
                 } else if (m_event.type == SDL_KEYDOWN) {
                     setKeyState(scanCode, true);
 
-                    // Set key state to not pressed
+                // Update key state to not pressed
                 } else if (m_event.type == SDL_KEYUP) {
                     setKeyState(scanCode, false);
                 }
-
-            	IOTriggered = true;
             }
 
             /*
@@ -186,14 +181,7 @@ void Chip8::start() {
 				m_index
 			};
 
-			m_window.drawDebugWindow(debugInfo);
-
-			// Keep ImGUI context up-to-date by re-rendering UI on user interaction
-			if (IOTriggered) {
-				m_window.render();
-			} else {
-				ImGui::EndFrame();
-			}
+			m_window.drawUI(debugInfo);
 
             if (m_PC > finalInstruction) {
                 // All instructions have completed

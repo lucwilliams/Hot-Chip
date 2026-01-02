@@ -12,6 +12,7 @@ Hot-Chip is a work-in-progress interpreter for the CHIP-8 programming language.
     - Emulated timers and sound ✔ 
     - Complete initial draft implementation of full instruction set ✔
     - Create debug tooling using ImGUI for UI (WIP)
+    - Fix instruction timing and implement accurate 60fps frame limiting
     - Debug and test all instructions for correct behaviour
     - Long term: 3DS port? 👀
 
