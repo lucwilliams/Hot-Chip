@@ -4,7 +4,16 @@
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_sdlrenderer2.h>
 #include <imgui_memory_editor.h>
+#include <imgui_internal.h>
 #include "Window.h"
+
+
+// ImGUI flags to make windows unmovable
+constexpr int kLockedWindowFlags =
+    ImGuiWindowFlags_NoMove |
+    ImGuiWindowFlags_NoResize |
+    ImGuiWindowFlags_NoCollapse
+;
 
 // Initialise program window
 Window::Window() {
@@ -53,6 +62,9 @@ Window::Window() {
 
     // Enable docking in ImGUI
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    // Disable ImGUI .ini settings file
+    ImGui::GetIO().IniFilename = nullptr;
 
     // Use SDL Renderer for ImGUI
     ImGui_ImplSDL2_InitForSDLRenderer(m_window, m_renderer);
@@ -125,31 +137,75 @@ void Window::drawUI(Chip8MemoryView debugInfo) {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
+    ImGuiID mainDockspaceID = ImGui::GetID("Full Dockspace");
+
+    // Use dockBuilder to form window
+    if (ImGui::DockBuilderGetNode(mainDockspaceID) == nullptr)
+    {
+        // Register full dockspace
+        ImGui::DockBuilderAddNode(
+            mainDockspaceID, ImGuiDockNodeFlags_DockSpace
+        );
+
+        // Use full viewport for dockspace
+        ImGui::DockBuilderSetNodeSize(
+            mainDockspaceID, ImGui::GetMainViewport()->Size
+        );
+
+        // Initialise split dock IDs
+        ImGuiID dock_id_main = mainDockspaceID;
+
+        ImGuiID leftSideDockID{0};
+        ImGuiID rightSideDockID{0};
+        ImGuiID bottomMiddleDockID{0};
+
+        /*
+         * Split up the dockspace to create a left vertical dock,
+         * using 20% of the width of the screen
+         */
+        ImGui::DockBuilderSplitNode(
+            dock_id_main, ImGuiDir_Left, 0.20f,
+            &leftSideDockID, &dock_id_main
+        );
+
+        // Repeat for the right vertical dock
+        ImGui::DockBuilderSplitNode(
+            dock_id_main, ImGuiDir_Right, 0.20f,
+            &rightSideDockID, &dock_id_main
+        );
+
+        // Split the main window down the middle to place debug UI below display
+        ImGui::DockBuilderSplitNode(
+            dock_id_main, ImGuiDir_Down, 0.40f,
+            &bottomMiddleDockID, &dock_id_main
+        );
+
+        ImGui::DockBuilderDockWindow("Chip-8", dock_id_main);
+        ImGui::DockBuilderDockWindow("Chip-8 Memory", bottomMiddleDockID);
+        ImGui::DockBuilderDockWindow("Registers", leftSideDockID);
+        ImGui::DockBuilderDockWindow("Instructions", rightSideDockID);
+
+        ImGui::DockBuilderFinish(mainDockspaceID);
+    }
+
     // Create full window dockspace
     ImGui::DockSpaceOverViewport(
-        0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode
-    );
-
-    // Set default size of emulated display
-    ImGui::SetNextWindowSize(
-        // Scaled width and height
-        {
-            kScreenWidth * kScreenViewPortUpscale,
-            kScreenHeight * kScreenViewPortUpscale
-        },
-        ImGuiCond_FirstUseEver
+        mainDockspaceID, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode
     );
 
     // Create window for emulated display
     ImGui::Begin(
         "Chip-8",
         nullptr,
+        // Lock window and prevent scroll
+        kLockedWindowFlags |
         ImGuiWindowFlags_NoScrollbar |
         ImGuiWindowFlags_NoScrollWithMouse
     );
 
     ImVec2 size = ImGui::GetContentRegionAvail();
 
+    // Use SDL_Texture (frame data of the emulated display) as an ImGUI image
     ImGui::Image(
         m_texture,
         size,
@@ -159,17 +215,66 @@ void Window::drawUI(Chip8MemoryView debugInfo) {
 
     ImGui::End();
 
-    // Set default size of memory viewer
-    ImGui::SetNextWindowSize({564, 439}, ImGuiCond_FirstUseEver);
-
     // Create memory viewer window
-    ImGui::Begin("Chip-8 Memory");
+    ImGui::Begin(
+        "Chip-8 Memory",
+        nullptr,
+        kLockedWindowFlags
+    );
     static MemoryEditor memoryViewer;
 
-    std::span<uint8_t>& memory = debugInfo.memory;
+    std::span<uint8_t> memory = debugInfo.memory;
     memoryViewer.DrawContents(
         memory.data(), memory.size()
     );
+
+    ImGui::End();
+
+    ImGui::Begin(
+        "Registers",
+        nullptr,
+        kLockedWindowFlags
+    );
+
+    // Create table for register values
+    if (ImGui::BeginTable("Registers", 1, 0))
+    {
+        ImGui::TableSetupColumn("Registers");
+        ImGui::TableHeadersRow();
+
+        constexpr uint8_t kRegisterAmount = 16;
+        for (int row = 0; row < kRegisterAmount; row++)
+        {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("V%d: %d", row, debugInfo.registers[row]);
+        }
+
+        // Add special registers
+        ImGui::Text("Index: %d", debugInfo.index);
+        ImGui::Text("PC: %d", debugInfo.PC);
+
+        ImGui::EndTable();
+    }
+
+    ImGui::End();
+
+    ImGui::Begin(
+        "Instructions",
+        nullptr,
+        kLockedWindowFlags
+    );
+
+    // Create table for instructions (WIP)
+    if (ImGui::BeginTable("Instructions", 1, 0))
+    {
+        ImGui::TableSetupColumn("Instructions");
+        ImGui::TableHeadersRow();
+
+        ImGui::Text("mov WIP, WIP");
+
+        ImGui::EndTable();
+    }
 
     ImGui::End();
 
