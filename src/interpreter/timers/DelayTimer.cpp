@@ -1,3 +1,4 @@
+#include <chrono>
 #include "DelayTimer.h"
 
 void DelayTimer::tickTimer(std::stop_token stopToken) {
@@ -10,6 +11,18 @@ void DelayTimer::tickTimer(std::stop_token stopToken) {
         if (m_timer > 0)
             --m_timer;
     }
+}
+
+void DelayTimer::reset() {
+    // End timer thread
+    m_timerThread.request_stop();
+    m_timerThread.join();
+
+    // Reset count
+    m_timer = 0;
+
+    // Create new thread
+    m_timerThread = std::jthread(&DelayTimer::tickTimer, this);
 }
 
 uint8_t DelayTimer::readTimer() {

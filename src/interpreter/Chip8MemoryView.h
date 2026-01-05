@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <span>
+#include <string>
 
 // A simple struct to hold read-only access to emulated memory.
 // Used by the Window class to display debug info.
@@ -10,4 +11,5 @@ struct Chip8MemoryView {
     std::span<uint8_t> registers;
     const uint16_t PC;
     const uint16_t index;
+    std::shared_ptr<std::string> sharedROMPath;
 };

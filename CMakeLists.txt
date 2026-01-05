@@ -25,6 +25,9 @@ add_executable(${PROJECT_NAME} ${SOURCE} ${IMGUI_SOURCE})
 # Add SDL2 files for compilation
 add_subdirectory(lib/SDL2)
 
+# Add NFDe files for compilation (file browser)
+add_subdirectory(lib/NFDe)
+
 if (WIN32)
     # Build for Windows with statically linked libraries for portability
     set(CMAKE_EXE_LINKER_FLAGS "-static -static-libgcc -static-libstdc++")
@@ -52,10 +55,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMA
 
 # Make header files accessible across all .cpp files
 target_include_directories(${PROJECT_NAME} PUBLIC
-    ${CMAKE_SOURCE_DIR}/lib/SDL2
+    ${CMAKE_SOURCE_DIR}/lib/SDL2/include
     ${CMAKE_SOURCE_DIR}/lib/imgui
     ${CMAKE_SOURCE_DIR}/lib/imgui-addons
     ${CMAKE_SOURCE_DIR}/lib/imgui/backends
 )
 
-target_link_libraries(${PROJECT_NAME} SDL2::SDL2)
+target_link_libraries(${PROJECT_NAME} SDL2::SDL2 nfd)

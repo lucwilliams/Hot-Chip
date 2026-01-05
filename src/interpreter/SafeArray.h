@@ -1,8 +1,8 @@
 #pragma once
 
+#include <iostream>
 #include <array>
 #include <cstdint>
-#include <iostream>
 
 template<std::uint16_t m_size, bool debugEnabled>
 class SafeArray {
@@ -42,5 +42,10 @@ class SafeArray {
 
         std::span<uint8_t> getDataView() {
             return m_data;
+        }
+
+        void clear() {
+            // Zero out array to clear data
+            m_data.fill(0);
         }
 };

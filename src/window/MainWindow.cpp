@@ -5,8 +5,8 @@
 #include <imgui_impl_sdlrenderer2.h>
 #include <imgui_memory_editor.h>
 #include <imgui_internal.h>
-#include "Window.h"
-
+#include <nfd_sdl2.h>
+#include "MainWindow.h"
 
 // ImGUI flags to make windows unmovable
 constexpr int kLockedWindowFlags =
@@ -16,7 +16,7 @@ constexpr int kLockedWindowFlags =
 ;
 
 // Initialise program window
-Window::Window() {
+MainWindow::MainWindow() {
     // Initialise SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         std::cerr << "Error initialising SDL." << std::endl;
@@ -55,7 +55,7 @@ Window::Window() {
     // Use nearest-neighbour scaling
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 
-    // Initialise ImGUI for debugging
+    // Initialise ImGUI for debug UI
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
@@ -69,6 +69,9 @@ Window::Window() {
     // Use SDL Renderer for ImGUI
     ImGui_ImplSDL2_InitForSDLRenderer(m_window, m_renderer);
     ImGui_ImplSDLRenderer2_Init(m_renderer);
+
+    // Initialise NFDe for file browser UI
+    NFD::Init();
 
     // Initialise texture surface for 2D rendering
     // Use SDL_PIXELFORMAT_INDEX1LSB for 1-bit pixels
@@ -96,13 +99,15 @@ Window::Window() {
 
     SDL_SetPaletteColors(m_surface->format->palette, monochrome, 0, 2);
 
-    // Framebuffer of the resolution of the 64x32 display (256 bytes)
-    // Each byte represents 8 pixels. Framebuffer represents original
-    // resolution, not upscaled
-    m_frameBuffer = static_cast<uint8_t*>(m_surface->pixels);
+    /*
+     * Framebuffer of the resolution of the 64x32 display (256 bytes)
+     * Each byte represents 8 pixels. Framebuffer represents the
+     * original resolution, not upscaled.
+     */
+    m_frameBuffer = {static_cast<uint8_t*>(m_surface->pixels), kPackedPixelCount};
 }
 
-void Window::render() {
+void MainWindow::render() {
     // Only update display texture when the framebuffer has been modified
     if (m_pixelsModified) {
         SDL_DestroyTexture(m_texture);
@@ -115,13 +120,29 @@ void Window::render() {
     }
 }
 
-void Window::clearDisplay() {
+void MainWindow::clearDisplay() {
     // Zero out framebuffer to completely clear it
-    // Divide pixel count by 8 for byte amount. (8 pixels per byte)
-    std::memset(m_frameBuffer, 0, kPixelCount / 8);
+    std::ranges::fill(m_frameBuffer, 0);
 
     // Update frame
     m_pixelsModified = true;
+}
+
+
+NFD::UniquePath MainWindow::openFileBrowser() {
+    NFD::UniquePath outPath;
+    nfdfilteritem_t fileTypeFilter[1] = {
+        {"Chip-8 ROM", "ch8,bin"}
+    };
+
+    nfdresult_t result = NFD::OpenDialog(outPath, fileTypeFilter, 1);
+
+    // Set output to nullptr if the user failed to choose a valid file
+    if (result != NFD_OKAY) {
+        outPath = nullptr;
+    }
+
+    return outPath;
 }
 
 /*
@@ -131,66 +152,74 @@ void Window::clearDisplay() {
  *
  * Chip8MemoryView only contains references so it can be copied as an argument.
  */
-void Window::drawUI(Chip8MemoryView debugInfo) {
+void MainWindow::drawUI(Chip8MemoryView debugInfo) {
     // Update ImGUI UI
     ImGui_ImplSDLRenderer2_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    ImGuiID mainDockspaceID = ImGui::GetID("Full Dockspace");
+    ImGuiID fullDockspaceID = ImGui::GetID("Full Dockspace");
 
     // Use dockBuilder to form window
-    if (ImGui::DockBuilderGetNode(mainDockspaceID) == nullptr)
+    if (ImGui::DockBuilderGetNode(fullDockspaceID) == nullptr)
     {
         // Register full dockspace
         ImGui::DockBuilderAddNode(
-            mainDockspaceID, ImGuiDockNodeFlags_DockSpace
+            fullDockspaceID, ImGuiDockNodeFlags_DockSpace
         );
 
         // Use full viewport for dockspace
         ImGui::DockBuilderSetNodeSize(
-            mainDockspaceID, ImGui::GetMainViewport()->Size
+            fullDockspaceID, ImGui::GetMainViewport()->Size
         );
 
         // Initialise split dock IDs
-        ImGuiID dock_id_main = mainDockspaceID;
+        ImGuiID displayDockspaceID = fullDockspaceID;
 
         ImGuiID leftSideDockID{0};
         ImGuiID rightSideDockID{0};
-        ImGuiID bottomMiddleDockID{0};
+        ImGuiID memoryViewerDockID{0};
+        ImGuiID controlsDockID{0};
 
         /*
          * Split up the dockspace to create a left vertical dock,
          * using 20% of the width of the screen
          */
         ImGui::DockBuilderSplitNode(
-            dock_id_main, ImGuiDir_Left, 0.20f,
-            &leftSideDockID, &dock_id_main
+            displayDockspaceID, ImGuiDir_Left, 0.20f,
+            &leftSideDockID, &displayDockspaceID
         );
 
         // Repeat for the right vertical dock
         ImGui::DockBuilderSplitNode(
-            dock_id_main, ImGuiDir_Right, 0.20f,
-            &rightSideDockID, &dock_id_main
+            displayDockspaceID, ImGuiDir_Right, 0.20f,
+            &rightSideDockID, &displayDockspaceID
         );
 
         // Split the main window down the middle to place debug UI below display
         ImGui::DockBuilderSplitNode(
-            dock_id_main, ImGuiDir_Down, 0.40f,
-            &bottomMiddleDockID, &dock_id_main
+            displayDockspaceID, ImGuiDir_Down, 0.40f,
+            &memoryViewerDockID, &displayDockspaceID
         );
 
-        ImGui::DockBuilderDockWindow("Chip-8", dock_id_main);
-        ImGui::DockBuilderDockWindow("Chip-8 Memory", bottomMiddleDockID);
+        // Split the bottom middle window to place memory viewer next to control buttons
+        ImGui::DockBuilderSplitNode(
+            memoryViewerDockID, ImGuiDir_Right, 0.30f,
+            &controlsDockID, &memoryViewerDockID
+        );
+
+        ImGui::DockBuilderDockWindow("Chip-8", displayDockspaceID);
+        ImGui::DockBuilderDockWindow("Chip-8 Memory", memoryViewerDockID);
+        ImGui::DockBuilderDockWindow("Chip-8 Controls", controlsDockID);
         ImGui::DockBuilderDockWindow("Registers", leftSideDockID);
         ImGui::DockBuilderDockWindow("Instructions", rightSideDockID);
 
-        ImGui::DockBuilderFinish(mainDockspaceID);
+        ImGui::DockBuilderFinish(fullDockspaceID);
     }
 
     // Create full window dockspace
     ImGui::DockSpaceOverViewport(
-        mainDockspaceID, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode
+        fullDockspaceID, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode
     );
 
     // Create window for emulated display
@@ -227,6 +256,25 @@ void Window::drawUI(Chip8MemoryView debugInfo) {
     memoryViewer.DrawContents(
         memory.data(), memory.size()
     );
+
+    ImGui::End();
+
+    // Create control window for emulator state
+    ImGui::Begin(
+        "Chip-8 Controls",
+        nullptr,
+        kLockedWindowFlags
+    );
+
+    if (ImGui::Button("Load ROM")) {
+        NFD::UniquePath ROMPath = openFileBrowser();
+
+        // If the user provided a valid file path
+        if (ROMPath) {
+            // Cast C string to std::array from underlying std::unique_ptr
+            *debugInfo.sharedROMPath = std::string(ROMPath.get());
+        }
+    }
 
     ImGui::End();
 
@@ -300,7 +348,7 @@ void Window::drawUI(Chip8MemoryView debugInfo) {
 // Start a position x, XOR x and the 7 following bits with rowData.
 // If the next 7 bits are in the following byte, continue flipping bits
 // in the second byte until the sprite byte is drawn.
-bool Window::drawRow(int x_index, int y_index, uint8_t rowData) {
+bool MainWindow::drawRow(int x_index, int y_index, uint8_t rowData) {
     // If position values exceed screen limits, wrap around.
     x_index %= kScreenWidth;
     y_index %= kScreenHeight;
@@ -355,7 +403,10 @@ bool Window::drawRow(int x_index, int y_index, uint8_t rowData) {
     return bitUnset;
 }
 
-Window::~Window() {
+MainWindow::~MainWindow() {
+    // Close NFDe
+    NFD::Quit();
+
     // Close ImGUI
     ImGui_ImplSDLRenderer2_Shutdown();
     ImGui_ImplSDL2_Shutdown();

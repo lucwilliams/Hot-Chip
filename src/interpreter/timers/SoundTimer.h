@@ -15,11 +15,12 @@ class SoundTimer : public Timer {
     // https://wiki.libsdl.org/SDL2/SDL_OpenAudioDevice
     SDL_AudioDeviceID m_audioDevice;
 
-    bool isBeeping = false;
+    bool m_isBeeping = false;
 
     void tickTimer(std::stop_token stopToken) override;
 
     public:
         SoundTimer();
-        ~SoundTimer();
+        void reset() override;
+        ~SoundTimer() override;
 };

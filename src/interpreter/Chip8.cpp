@@ -7,15 +7,20 @@
 #include <imgui_impl_sdl2.h>
 #include "Chip8.h"
 
-Chip8::Chip8(const std::string& fileName, Window& window)
-	: m_window{window}
+Chip8::Chip8(const std::string& fileName, MainWindow& window)
+	: m_ROMPath{fileName}
+	, m_window{window}
 {
+	loadROM();
+}
+
+void Chip8::loadROM() {
 	// Read ROM data
 	std::ifstream inFS;
 
 	// Open the file to read in binary
 	// Use ifstream::ate to position the get pointer at the end of file
-	inFS.open(fileName, std::ifstream::binary | std::ifstream::ate);
+	inFS.open(m_ROMPath, std::ifstream::binary | std::ifstream::ate);
 
 	if (inFS.is_open()) {
 		// Determine ROM size by checking the position of the get pointer
@@ -24,7 +29,7 @@ Chip8::Chip8(const std::string& fileName, Window& window)
 		// Check that ROM isn't greater than the space allocated to it in program memory
 		// 4096 - 512 (offset of ROM in memory)
 		if (m_ROMSize > (kMemorySize - kROMOffset))
-			throw std::runtime_error("ROM size exceeds maximum of 3584 bytes: " + fileName);
+			throw std::runtime_error("ROM size exceeds maximum of 3584 bytes: " + m_ROMPath);
 
 		// Return get pointer to start of file
 		inFS.seekg(0, std::ifstream::beg);
@@ -36,9 +41,31 @@ Chip8::Chip8(const std::string& fileName, Window& window)
 
 		// Initialise font data. Start font data in position 0x50 (+80 bytes) as is conventional.
 		std::copy(kFontData.begin(), kFontData.end(), m_memory.begin() + kFontOffset);
+
+		// Update m_sharedROMPath with currently loaded ROM
+		*m_sharedROMPath = m_ROMPath;
 	} else {
-		throw std::runtime_error("Error opening ROM: " + fileName + ", " + std::strerror(errno));
+		throw std::runtime_error("Error opening ROM: " + m_ROMPath + ", " + std::strerror(errno));
 	}
+}
+
+void Chip8::resetEmulator() {
+	// Clear memory and registers
+	m_memory.clear();
+	m_registers.clear();
+
+	m_index = 0;
+	m_PC = kROMOffset;
+
+	// Clear stack
+	m_stack.fill(0);
+	m_stackSize = 0;
+
+	// Reset timers
+	m_soundTimer.reset();
+
+	// Clear framebuffer
+	m_window.clearDisplay();
 }
 
 void Chip8::decode(uint16_t instruction) {
@@ -121,6 +148,27 @@ void Chip8::decode(uint16_t instruction) {
 }
 
 void Chip8::start() {
+	// Run emulator until window closes
+	while (!m_windowClosed) {
+		executionLoop();
+
+		/*
+		 * If the last emulation ended but the window didn't close,
+		 * we know the emulation ended because the user
+		 * requested a new ROM to be loaded.
+		*/
+		if (!m_windowClosed) {
+			// Update ROM file path with new path requested
+			m_ROMPath = *m_sharedROMPath;
+
+			// Reset emulator state and load ROM
+			resetEmulator();
+			loadROM();
+		}
+	}
+}
+
+void Chip8::executionLoop() {
 	// The memory location of the ROM's final valid instruction
 	// Subtract two since instructions are two bytes in size.
 	const uint16_t finalInstruction {
@@ -132,6 +180,11 @@ void Chip8::start() {
 
 	// Fetch/decode/execute loop
 	while (!m_windowClosed) {
+		// Check if user has loaded a new ROM
+		if (m_ROMPath != *m_sharedROMPath) {
+			return;
+		}
+
 		if (finished) {
 			// Sleep until the user closes the window
 			SDL_WaitEvent(&m_event);
@@ -178,7 +231,8 @@ void Chip8::start() {
 				m_memory.getDataView(),
 				m_registers.getDataView(),
 				m_PC,
-				m_index
+				m_index,
+				m_sharedROMPath
 			};
 
 			m_window.drawUI(debugInfo);

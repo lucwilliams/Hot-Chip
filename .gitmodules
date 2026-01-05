@@ -4,3 +4,6 @@
 [submodule "lib/SDL2"]
 	path = lib/SDL2
 	url = https://github.com/libsdl-org/SDL.git
+[submodule "lib/NFDe"]
+	path = lib/NFDe
+	url = https://github.com/btzy/nativefiledialog-extended.git

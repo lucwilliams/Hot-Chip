@@ -5,7 +5,7 @@ int main(int argc, char** argv) {
         std::string fileName{argv[1]};
 
         // Create a window to use as a display
-        Window window = Window();
+        MainWindow window = MainWindow();
 
         // Create a CHIP-8 interpreter with window passed by reference
         Chip8 interpreter = Chip8(fileName, window);

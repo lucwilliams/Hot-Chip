@@ -9,17 +9,23 @@ Hot-Chip is a work-in-progress interpreter for the CHIP-8 programming language.
     - Abstract registers and program memory (incl. stack and font data) ✔
     - Decode binary ROM files and execute instructions ✔
     - Implement simple instructions to set/read registers and draw to display ✔
-    - Emulated timers and sound ✔ 
+    - Emulated timers, sound and keyboard ✔ 
     - Complete initial draft implementation of full instruction set ✔
+    - Emulator passes all Timendus test ROMs ✔
+
+    TO:DO:
     - Create debug tooling using ImGUI for UI (WIP)
     - Fix instruction timing and implement accurate 60fps frame limiting
     - Debug and test all instructions for correct behaviour
-    - Long term: 3DS port? 👀
+    
+    Long term: ...3DS port? 👀
 
 The end goal for the program is a fully functional cross-platform CHIP-8 interpreter that can be compiled to Windows, Linux and macOS.
 
 ### Dependencies
-Hot-Chip uses [SDL2](https://www.libsdl.org/) under the [zlib](https://www.libsdl.org/license.php) license and [Dear ImGUI](https://github.com/ocornut/imgui), under the [MIT](https://github.com/ocornut/imgui/blob/master/LICENSE.txt) license.
+Hot-Chip uses [SDL2](https://www.libsdl.org/) and [NFDe](https://github.com/btzy/nativefiledialog-extended) under the [zlib](https://www.libsdl.org/license.php) license and [Dear ImGUI](https://github.com/ocornut/imgui), under the [MIT](https://github.com/ocornut/imgui/blob/master/LICENSE.txt) license.
+
+NFDe requires `libgtk-3-dev` to be installed to build on Linux.
 
 ### Clone repository and dependencies:
 ```shell

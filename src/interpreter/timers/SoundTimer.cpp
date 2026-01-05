@@ -1,3 +1,4 @@
+#include <chrono>
 #include "SoundTimer.h"
 
 // Configuration to produce beep sound
@@ -75,15 +76,28 @@ void SoundTimer::tickTimer(std::stop_token stopToken) {
         if (m_timer > 0) {
             // Beep! (unpause)
             SDL_PauseAudioDevice(m_audioDevice, kAudioPlay);
-            isBeeping = true;
+            m_isBeeping = true;
 
             // Decrement timer
             --m_timer;
         // Only pause if speaker is currently beeping
-        } else if (isBeeping) {
+        } else if (m_isBeeping) {
             SDL_PauseAudioDevice(m_audioDevice, kAudioPause);
-            isBeeping = false;
+            m_isBeeping = false;
         }
     }
+}
+
+void SoundTimer::reset() {
+    // End timer thread
+    m_timerThread.request_stop();
+    m_timerThread.join();
+
+    // Reset state
+    m_timer = 0;
+    m_isBeeping = false;
+
+    // Create new thread
+    m_timerThread = std::jthread(&SoundTimer::tickTimer, this);
 }
 

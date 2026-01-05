@@ -8,6 +8,7 @@ class DelayTimer : public Timer {
 
     public:
         DelayTimer();
-        ~DelayTimer();
         uint8_t readTimer();
+        void reset() override;
+        ~DelayTimer() override;
 };

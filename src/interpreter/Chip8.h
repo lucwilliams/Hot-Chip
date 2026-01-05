@@ -3,7 +3,7 @@
 #include <array>
 #include <random>
 #include <bitset>
-#include "../window/Window.h"
+#include "../window/MainWindow.h"
 #include "timers/SoundTimer.h"
 #include "timers/DelayTimer.h"
 #include "SafeArray.h"
@@ -71,6 +71,18 @@ class Chip8 {
     // 10000000 in binary
     static constexpr uint16_t kMSBMask = 0x80;
 
+    /*
+     * m_ROMPath contains the actual file path of the currently loaded ROM.
+     * m_sharedROMPath contains the desired path chosen by the UI.
+     *
+     * Once m_sharedROMPath updates, the emulator loads the ROM at that path,
+     * and m_ROMPath updates to use the path stored in m_sharedROMPath.
+     */
+    std::string m_ROMPath;
+
+    // TODO: Consider alternative container for m_sharedROMPath
+    std::shared_ptr<std::string> m_sharedROMPath{std::make_shared<std::string>()};
+
     // Emulated memory
     SafeArray<kMemorySize, kDebugEnabled> m_memory{};
     uint16_t m_ROMSize{};
@@ -86,6 +98,7 @@ class Chip8 {
     uint16_t m_PC{kROMOffset};
 
     // Stack, just for subroutine return addresses
+    // TODO: Use SafeArray for m_stack?
     std::array<uint16_t, 16> m_stack{};
     uint8_t m_stackSize {0};
 
@@ -101,10 +114,10 @@ class Chip8 {
     };
 
     // Generate a random value from 0 to 255 (max value of uint8_t)
-    std::uniform_int_distribution<uint8_t> m_randUint8{ 0, 255 };
+    std::uniform_int_distribution<uint8_t> m_randUint8{0, 255};
 
     // Window is initialised in the constructor initialisation list
-    Window& m_window;
+    MainWindow& m_window;
 
     SoundTimer m_soundTimer;
     DelayTimer m_delayTimer;
@@ -216,7 +229,22 @@ class Chip8 {
     void opcodeE(uint16_t instruction);
     void opcodeF(uint16_t instruction);
 
+    /*
+     * Private member functions used to initialise and
+     * reset the state of the emulator.
+     */
+    void loadROM();
+    void resetEmulator();
+
+    /*
+     * Main execution loop of the emulator.
+     *
+     * The state of the window (closed or running)
+     * determines whether the emulation is still running.
+     */
+    void executionLoop();
+
     public:
-        Chip8(const std::string& fileName, Window& window);
+        Chip8(const std::string& fileName, MainWindow& window);
         void start();
 };
