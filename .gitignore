@@ -4,4 +4,7 @@ cmake-build-debug
 cmake-build-release
 roms
 Hot-Chip
+Hot-Chip.exe
+SDL2.dll
+SDL2d.dll
 imgui.ini

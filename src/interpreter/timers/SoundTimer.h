@@ -17,10 +17,9 @@ class SoundTimer : public Timer {
 
     bool m_isBeeping = false;
 
-    void tickTimer(std::stop_token stopToken) override;
-
     public:
         SoundTimer();
-        void reset() override;
         ~SoundTimer() override;
+        void tickTimer() override;
+        void reset() override;
 };

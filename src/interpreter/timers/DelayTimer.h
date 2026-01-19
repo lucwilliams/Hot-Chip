@@ -4,11 +4,18 @@
 
 // Delay timer is read+write
 class DelayTimer : public Timer {
-    void tickTimer(std::stop_token stopToken) override;
-
     public:
-        DelayTimer();
-        uint8_t readTimer();
-        void reset() override;
-        ~DelayTimer() override;
+        uint8_t readTimer() {
+            return m_timer;
+        }
+
+        void tickTimer() override {
+            if (m_timer > 0)
+                --m_timer;
+        }
+
+        void reset() override {
+            // Reset count
+            m_timer = 0;
+        }
 };

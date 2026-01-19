@@ -20,31 +20,16 @@ file(GLOB IMGUI_SOURCE CONFIGURE_DEPENDS
     lib/imgui/backends/imgui_impl_sdlrenderer2.cpp
 )
 
-add_executable(${PROJECT_NAME} ${SOURCE} ${IMGUI_SOURCE})
-
 # Add SDL2 files for compilation
 add_subdirectory(lib/SDL2)
 
 # Add NFDe files for compilation (file browser)
 add_subdirectory(lib/NFDe)
 
-if (WIN32)
-    # Build for Windows with statically linked libraries for portability
-    set(CMAKE_EXE_LINKER_FLAGS "-static -static-libgcc -static-libstdc++")
+add_executable(${PROJECT_NAME} ${SOURCE} ${IMGUI_SOURCE})
 
-    # Use Windows CUI for output
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mconsole")
-
-    # Copy SDL2.dll into project root if it doesn't exist
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:SDL2>
-        "${CMAKE_SOURCE_DIR}/SDL2.dll"
-    )
-endif()
-
-# Enable warnings.
-# Only optimise for release and only use debug symbols for debug builds.
+# Enable warnings
+# Only optimise for release and only use debug symbols for debug builds
 target_compile_options(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:Release>:-O3 -Wall -Werror -Wextra>
     $<$<CONFIG:Debug>:-g -DDEBUG -O0>
@@ -61,4 +46,21 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_SOURCE_DIR}/lib/imgui/backends
 )
 
-target_link_libraries(${PROJECT_NAME} SDL2::SDL2 nfd)
+if (WIN32)
+    # Use Windows CUI for output
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mconsole")
+
+    # Copy SDL2.dll into project root if it doesn't exist.
+    # Credit: https://github.com/libsdl-org/SDL/issues/6399#issuecomment-1280612287
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:SDL2::SDL2>" "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+        VERBATIM
+    )
+
+    # Only link SDL2main on Windows
+    # Link WinMM for timeBeginPeriod() function
+    target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2main winmm)
+endif()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2 nfd)

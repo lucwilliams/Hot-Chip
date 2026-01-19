@@ -37,7 +37,6 @@ void Chip8::opcode0(uint16_t instruction) {
 	switch (lowByte) {
         case opcode::CLEAR_DISPLAY:
             m_window.clearDisplay();
-            m_window.render();
             break;
         case opcode::RETURN:
             if (m_stackSize > 0) {
@@ -303,8 +302,6 @@ void Chip8::opcodeD(uint16_t instruction) {
     } else {
         VF = 0;
     }
-
-    m_window.render();
 }
 
 // Skip next instruction if key stored in VX is pressed
@@ -352,44 +349,10 @@ void Chip8::opcodeF(uint16_t instruction) {
         case opcode::TIMER_SOUND_SET:
             m_soundTimer.setTimer(VX);
             break;
-        case opcode::AWAIT_KEY: {
-            // Store the key once pressed to await its release
-            SDL_Scancode pressedKey;
-            bool keyPressed = false;
-            bool keyReleased = false;
-
-            // Block execution until a key is pressed and released
-            while (!keyReleased) {
-                SDL_WaitEvent(&m_event);
-                SDL_Scancode& scanCode = m_event.key.keysym.scancode;
-
-                if (m_event.type == SDL_QUIT) {
-                    m_windowClosed = true;
-                    return;
-                }
-
-                if (!keyPressed) {
-                    if (m_event.type == SDL_KEYDOWN) {
-                        // Set VX to key
-                        VX = scanCodeToPos(scanCode);
-
-                        // Save pressed key to await release
-                        keyPressed = true;
-                        pressedKey = scanCode;
-                    }
-                } else if (
-                    // If the pressed key has been raised
-                    m_event.type == SDL_KEYUP &&
-                    scanCode == pressedKey
-                ) {
-                    // Set VX to key
-                    VX = scanCodeToPos(scanCode);
-                    keyReleased = true;
-                }
-            }
-
+        case opcode::AWAIT_KEY:
+            // Behaviour of this instruction takes place in the main event loop in executionLoop()
+            m_awaitingKey = true;
             break;
-        }
         case opcode::ADD_TO_I:
             m_index += VX;
             break;

@@ -5,7 +5,18 @@
 #include <algorithm>
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
+#include <chrono>
 #include "Chip8.h"
+
+// For platform-specific timing
+#if defined(_WIN64)
+	#include <Windows.h>
+	#include <timeapi.h>
+
+	static constexpr bool kUsingWindows = true;
+#else
+	static constexpr bool kUsingWindows = false;
+#endif
 
 Chip8::Chip8(const std::string& fileName, MainWindow& window)
 	: m_ROMPath{fileName}
@@ -50,10 +61,9 @@ void Chip8::loadROM() {
 }
 
 void Chip8::resetEmulator() {
-	// Clear memory and registers
+	// Reset memory and registers
 	m_memory.clear();
 	m_registers.clear();
-
 	m_index = 0;
 	m_PC = kROMOffset;
 
@@ -63,6 +73,7 @@ void Chip8::resetEmulator() {
 
 	// Reset timers
 	m_soundTimer.reset();
+	m_delayTimer.reset();
 
 	// Clear framebuffer
 	m_window.clearDisplay();
@@ -148,6 +159,12 @@ void Chip8::decode(uint16_t instruction) {
 }
 
 void Chip8::start() {
+	#if defined(_WIN64)
+		// Request Windows to allow this program to use higher precision sleep timing.
+		// (may not be very effective on Windows 11)
+		timeBeginPeriod(1);
+	#endif
+
 	// Run emulator until window closes
 	while (!m_windowClosed) {
 		executionLoop();
@@ -166,6 +183,11 @@ void Chip8::start() {
 			loadROM();
 		}
 	}
+
+	// Restore timer resolution
+	#if defined(_WIN64)
+		timeBeginPeriod(1);
+	#endif
 }
 
 void Chip8::executionLoop() {
@@ -180,6 +202,9 @@ void Chip8::executionLoop() {
 
 	// Fetch/decode/execute loop
 	while (!m_windowClosed) {
+		// * frame begins here *
+		const auto frameStart = std::chrono::steady_clock::now();
+
 		// Check if user has loaded a new ROM
 		if (m_ROMPath != *m_sharedROMPath) {
 			return;
@@ -194,58 +219,71 @@ void Chip8::executionLoop() {
 				return;
 			}
 		} else {
-            // Get user inputs to update keyboard state
-            // before executing instructions
-            while (SDL_PollEvent(&m_event)) {
-            	// Pass event to ImGUI
-            	ImGui_ImplSDL2_ProcessEvent(&m_event);
+			// Get user inputs to update keyboard state at frame start
+			while (SDL_PollEvent(&m_event)) {
+				// Pass event to ImGUI
+				ImGui_ImplSDL2_ProcessEvent(&m_event);
 
-            	// Scancode of keypress (null for non-keypress)
-                SDL_Scancode& scanCode = m_event.key.keysym.scancode;
+				// Scancode of key (zero if event is not a keypress)
+				SDL_Scancode& scanCode = m_event.key.keysym.scancode;
 
-                if (m_event.type == SDL_QUIT) {
-                    m_windowClosed = true;
+				// Terminate execution on window close event
+				if (m_event.type == SDL_QUIT) {
+					m_windowClosed = true;
+					return;
+				}
 
-                // Update key state to pressed
-                } else if (m_event.type == SDL_KEYDOWN) {
-                    setKeyState(scanCode, true);
+				// Update key state to pressed
+				if (m_event.type == SDL_KEYDOWN) {
+					setKeyState(scanCode, true);
 
-                // Update key state to not pressed
-                } else if (m_event.type == SDL_KEYUP) {
-                    setKeyState(scanCode, false);
-                }
-            }
+					/*
+					 * If AWAIT_KEY was called and a key hasn't been pressed previously,
+					 * save the scancode of this pressed key to await release.
+					 */
+					if (m_awaitingKey && m_awaitingScanCode == kNULLScanCode)
+						m_awaitingScanCode = scanCode;
 
-            /*
-             * Terminates program after user closes the window.
-             *
-             * This condition can be true outside the event loop above
-             * if the user closes the window in the AWAIT_KEY instruction
-             * which also polls input events.
-            */
-            if (m_windowClosed)
-                return;
+				// Update key state to not pressed
+				} else if (m_event.type == SDL_KEYUP) {
+					setKeyState(scanCode, false);
 
-			// Create struct to pass read-only debug info to Window
-			Chip8MemoryView debugInfo {
-				m_memory.getDataView(),
-				m_registers.getDataView(),
-				m_PC,
-				m_index,
-				m_sharedROMPath
-			};
+					/*
+					 * If AWAIT_KEY was called and a key has been pressed,
+					 * update VX to the released key's value.
+					 */
+					if (m_awaitingKey && m_awaitingScanCode != kNULLScanCode) {
+						uint8_t& VX = m_registers[m_awaitingKeyRegNum];
+						VX = scanCodeToPos(scanCode);
 
-			m_window.drawUI(debugInfo);
+						// Restore variables for next AWAIT_KEY call
+						m_awaitingKey = false;
+						m_awaitingScanCode = kNULLScanCode;
+					}
+				}
+			}
+		}
 
+		// Count the number of instructions executed per frame for timing emulation (IPF)
+		uint16_t instructionsExecuted{0};
+
+		// Execute a certain number of instructions per frame (~12).
+		// Don't continue execution if we're currently awaiting a key press in AWAIT_KEY instruction.
+		while (instructionsExecuted < kInstructionsPerFrame && !m_awaitingKey) {
             if (m_PC > finalInstruction) {
                 // All instructions have completed
                 finished = true;
             } else if (m_PC + 1 < kMemorySize) {
-                // Fetch instruction:
-                // Our memory is 8 bits, but an instruction is 16 bits.
-                // We concatenate the byte at PC with the byte that follows to form one uint16_t
+                /*
+                 * Fetch instruction:
+                 * Our memory is 8 bits, but an instruction is 16 bits.
+                 * We concatenate the byte at PC with the byte that follows to form one uint16_t
+                 */
                 uint16_t instruction = static_cast<uint16_t>(m_memory[m_PC]) << 8 | m_memory[m_PC + 1];
                 decode(instruction);
+
+            	// Increment instruction count
+            	instructionsExecuted++;
 
                 // Do not increment PC for jump or return instructions
                 if (!m_PCUpdated)
@@ -258,6 +296,85 @@ void Chip8::executionLoop() {
                 );
             }
 		}
+
+		// Create struct to pass read-only debug info to Window
+		Chip8MemoryView debugInfo {
+			m_memory.getDataView(),
+			m_registers.getDataView(),
+			m_PC,
+			m_index,
+			m_sharedROMPath
+		};
+
+		// Render frame (no change if no draw/clear calls made)
+		m_window.render();
+
+		// Render ImGUI UI
+		m_window.drawUI(debugInfo);
+
+		/*
+		 * CHIP-8's timers decrement at the same pace as the framerate.
+		 * Therefore, we tick each timer once per frame.
+		 */
+		m_delayTimer.tickTimer();
+		m_soundTimer.tickTimer();
+
+		// Inspired by Dolphin emulator's implementation of busy waiting:
+		// https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/Common/Timer.cpp
+
+		// The expected end time of the frame
+		const auto frameEnd = frameStart + kFrameDuration;
+
+		// Actual end time of the frame
+		const auto frameComplete = std::chrono::steady_clock::now();
+
+		// If the frame completed with time to spare, sleep until the next frame
+		if (frameComplete < frameEnd) {
+			if (kUsingWindows) {
+				// TO:DO Use CreateWaitableTimerExW for high accuracy windows sleep
+			} else {
+				// Sleep on Linux for all but the last millisecond
+				constexpr auto spinDuration = std::chrono::milliseconds{1};
+				const auto preSpinSleepTill = frameEnd - spinDuration;
+
+				std::this_thread::sleep_until(preSpinSleepTill);
+			}
+
+			// Report oversleeps for debugging
+			if (kDebugEnabled) {
+				const auto timeNow = std::chrono::steady_clock::now();
+
+				if (timeNow > frameEnd) {
+					// The amount of milliseconds overslept by
+					const auto oversleepDuration =
+						std::chrono::duration_cast<std::chrono::milliseconds>(
+							timeNow - frameEnd
+						).count();
+
+					std::cout <<
+						"[DEBUG] Overslept! " << oversleepDuration << " milliseconds late."
+					<< std::endl;
+				}
+			}
+
+			// Spin for the remaining time
+			while (std::chrono::steady_clock::now() < frameEnd) {
+				#if defined(_WIN32)
+					YieldProcessor();
+				#else
+					std::this_thread::yield();
+				#endif
+			}
+		} else if (kDebugEnabled) {
+			// The amount of milliseconds the frame was late by
+			const auto frameLag =
+				std::chrono::duration_cast<std::chrono::milliseconds>(
+					frameComplete - frameEnd
+				).count();
+
+			std::cout <<
+				"[DEBUG] Slow frame! " << frameLag << " milliseconds late."
+			<< std::endl;
+		}
 	}
 }
-

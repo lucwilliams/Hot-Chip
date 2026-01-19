@@ -71,6 +71,12 @@ class Chip8 {
     // 10000000 in binary
     static constexpr uint16_t kMSBMask = 0x80;
 
+    // Use constant instructions per frame (IPF) for now
+    static constexpr uint16_t kInstructionsPerFrame = 22;
+
+    // Assume 60fps constant frame timing for now.
+    static constexpr auto kFrameDuration = std::chrono::duration<double>(1.0 / 60.0);
+
     /*
      * m_ROMPath contains the actual file path of the currently loaded ROM.
      * m_sharedROMPath contains the desired path chosen by the UI.
@@ -130,6 +136,18 @@ class Chip8 {
 
     // For handling user input events
     SDL_Event m_event{};
+
+    // Boolean used to block execution on AWAIT_KEY instruction
+    bool m_awaitingKey = false;
+
+    // Use SDL_SCANCODE_UNKNOWN when the key is yet to be pressed.
+    static constexpr SDL_Scancode kNULLScanCode = SDL_SCANCODE_UNKNOWN;
+
+    // The key pressed by the AWAIT_KEY instruction, to await its release.
+    SDL_Scancode m_awaitingScanCode = kNULLScanCode;
+
+    // The register number used to store keypress of AWAIT_KEY instruction
+    uint8_t m_awaitingKeyRegNum{0};
 
     // Second step of the fetch/decode/execute loop
     void decode(uint16_t instruction);
