@@ -15,6 +15,12 @@
     inline constexpr bool kDebugEnabled = false;
 #endif
 
+// For Windows platform-specific timing
+#if defined(_WIN64)
+	#include <Windows.h>
+	#include <timeapi.h>
+#endif
+
 class Chip8 {
     // Character representations for 0-9 + A-F
     // https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#font
@@ -76,6 +82,13 @@ class Chip8 {
 
     // Assume 60fps constant frame timing for now.
     static constexpr auto kFrameDuration = std::chrono::duration<double>(1.0 / 60.0);
+
+
+
+    // Handle to waitable timer object for Windows
+    #if defined(_WIN64)
+        HANDLE m_winTimerHandle = nullptr;
+    #endif
 
     /*
      * m_ROMPath contains the actual file path of the currently loaded ROM.
@@ -264,5 +277,6 @@ class Chip8 {
 
     public:
         Chip8(const std::string& fileName, MainWindow& window);
+        ~Chip8();
         void start();
 };

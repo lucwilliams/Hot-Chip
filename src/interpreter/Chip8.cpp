@@ -8,20 +8,18 @@
 #include <chrono>
 #include "Chip8.h"
 
-// For platform-specific timing
-#if defined(_WIN64)
-	#include <Windows.h>
-	#include <timeapi.h>
-
-	static constexpr bool kUsingWindows = true;
-#else
-	static constexpr bool kUsingWindows = false;
-#endif
-
 Chip8::Chip8(const std::string& fileName, MainWindow& window)
 	: m_ROMPath{fileName}
 	, m_window{window}
 {
+    #if defined(_WIN64)
+    	// Initialise high resolution timer on Windows
+		m_winTimerHandle = CreateWaitableTimerExW(nullptr, nullptr,
+			CREATE_WAITABLE_TIMER_HIGH_RESOLUTION,
+			TIMER_ALL_ACCESS
+		);
+    #endif
+
 	loadROM();
 }
 
@@ -161,7 +159,6 @@ void Chip8::decode(uint16_t instruction) {
 void Chip8::start() {
 	#if defined(_WIN64)
 		// Request Windows to allow this program to use higher precision sleep timing.
-		// (may not be very effective on Windows 11)
 		timeBeginPeriod(1);
 	#endif
 
@@ -183,11 +180,6 @@ void Chip8::start() {
 			loadROM();
 		}
 	}
-
-	// Restore timer resolution
-	#if defined(_WIN64)
-		timeBeginPeriod(1);
-	#endif
 }
 
 void Chip8::executionLoop() {
@@ -319,8 +311,20 @@ void Chip8::executionLoop() {
 		m_delayTimer.tickTimer();
 		m_soundTimer.tickTimer();
 
-		// Inspired by Dolphin emulator's implementation of busy waiting:
-		// https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/Common/Timer.cpp
+		/*
+		 * Busy waiting logic is derived from Dolphin Emulator:
+		 * (permissible under GPL-2.0-or-later)
+		 * https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/Common/Timer.cpp
+		 *
+		 * Windows implementation is informed by Blat Blatnik's research on high-accuracy sleep:
+		 * https://blog.bearcats.nl/perfect-sleep-function/
+		 */
+
+		 /*
+		 * 1 millisecond of spin time seems like a good balance between
+		 * accuracy and performance on both Windows and Linux.
+		 */
+		constexpr auto spinDuration = std::chrono::milliseconds{1};
 
 		// The expected end time of the frame
 		const auto frameEnd = frameStart + kFrameDuration;
@@ -330,29 +334,68 @@ void Chip8::executionLoop() {
 
 		// If the frame completed with time to spare, sleep until the next frame
 		if (frameComplete < frameEnd) {
-			if (kUsingWindows) {
-				// TO:DO Use CreateWaitableTimerExW for high accuracy windows sleep
-			} else {
-				// Sleep on Linux for all but the last millisecond
-				constexpr auto spinDuration = std::chrono::milliseconds{1};
-				const auto preSpinSleepTill = frameEnd - spinDuration;
+			#if defined(_WIN64)
+				// SetWaitableTimerEx takes time in "100 nanosecond intervals". (Credit: Dolphin)
+				using winTimeFormat = std::chrono::duration<LONGLONG, std::ratio<100, std::nano::den>::type>;
 
-				std::this_thread::sleep_until(preSpinSleepTill);
-			}
+				/*
+				 * From Blat Blatnik's blog:
+				 *
+				 * "Also, [CreateWaitableTimerEx] has a quirk that if you request a sleep
+				 * period longer than the system timer period, the precision of the timer plummets."
+				 *
+				 * We limit the sleep to 95% of the time period to avoid this quirk.
+				 */
+				constexpr auto kMaxTicks =
+					duration_cast<winTimeFormat>(spinDuration) * 95 / 100;
+
+				/*
+				 * Loop using high precision sleep until end of frame is reached,
+				 * to avoid oversleep and achieve high accuracy.
+				 */
+				while (true) {
+					const auto timeNow = std::chrono::steady_clock::now();
+					const auto sleepDuration = frameEnd - timeNow - spinDuration;
+
+					// Limit maximum sleep duration to kMaxTicks (95% of 1 millisecond)
+					const auto ticks = std::min(
+						duration_cast<winTimeFormat>(sleepDuration), kMaxTicks
+					).count();
+
+					if (ticks <= 0)
+						// Sleep time has finished, spin the rest
+						break;
+
+					// Negate ticks to make Windows use relative time
+					const LARGE_INTEGER due_time{.QuadPart = -ticks};
+					SetWaitableTimerEx(
+						m_winTimerHandle, &timerDue, 0, nullptr,
+						nullptr, nullptr, 0
+					);
+
+					// Wait for timer. Use INFINITE to disable timeout.
+					WaitForSingleObject(m_winTimerHandle, INFINITE);
+				}
+			#else
+				// sleep_until on Linux provides high accuracy
+				const auto sleepPoint = frameEnd - spinDuration;
+
+				std::this_thread::sleep_until(sleepPoint);
+			#endif
 
 			// Report oversleeps for debugging
 			if (kDebugEnabled) {
 				const auto timeNow = std::chrono::steady_clock::now();
 
 				if (timeNow > frameEnd) {
-					// The amount of milliseconds overslept by
+					// The amount of microseconds overslept by
 					const auto oversleepDuration =
-						std::chrono::duration_cast<std::chrono::milliseconds>(
+						std::chrono::duration_cast<std::chrono::microseconds>(
 							timeNow - frameEnd
 						).count();
 
 					std::cout <<
-						"[DEBUG] Overslept! " << oversleepDuration << " milliseconds late."
+						"[DEBUG] Overslept! " << oversleepDuration << " microseconds late."
 					<< std::endl;
 				}
 			}
@@ -377,4 +420,13 @@ void Chip8::executionLoop() {
 			<< std::endl;
 		}
 	}
+}
+
+Chip8::~Chip8() {
+	#if defined(_WIN32)
+		CloseHandle(m_winTimerHandle);
+
+		// Restore timer resolution
+		timeBeginPeriod(1);
+	#endif
 }
