@@ -16,7 +16,9 @@ constexpr int kLockedWindowFlags =
 ;
 
 // Initialise program window
-MainWindow::MainWindow() {
+MainWindow::MainWindow(std::string_view ROMPath)
+    : m_desiredROMPath{ROMPath}
+{
     // Initialise SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         std::cerr << "Error initialising SDL." << std::endl;
@@ -104,7 +106,7 @@ MainWindow::MainWindow() {
      * Each byte represents 8 pixels. Framebuffer represents the
      * original resolution, not upscaled.
      */
-    m_frameBuffer = {static_cast<uint8_t*>(m_surface->pixels), kPackedPixelCount};
+    m_frameBuffer = {static_cast<std::uint8_t*>(m_surface->pixels), kPackedPixelCount};
 }
 
 void MainWindow::render() {
@@ -152,7 +154,7 @@ NFD::UniquePath MainWindow::openFileBrowser() {
  *
  * Chip8MemoryView only contains references so it can be copied as an argument.
  */
-void MainWindow::drawUI(Chip8MemoryView debugInfo) {
+void MainWindow::drawUI(Chip8DebugData debugInfo) {
     // Update ImGUI UI
     ImGui_ImplSDLRenderer2_NewFrame();
     ImGui_ImplSDL2_NewFrame();
@@ -252,7 +254,7 @@ void MainWindow::drawUI(Chip8MemoryView debugInfo) {
     );
     static MemoryEditor memoryViewer;
 
-    std::span<uint8_t> memory = debugInfo.memory;
+    std::span<std::uint8_t> memory = debugInfo.memory;
     memoryViewer.DrawContents(
         memory.data(), memory.size()
     );
@@ -271,8 +273,7 @@ void MainWindow::drawUI(Chip8MemoryView debugInfo) {
 
         // If the user provided a valid file path
         if (ROMPath) {
-            // Cast C string to std::array from underlying std::unique_ptr
-            *debugInfo.sharedROMPath = std::string(ROMPath.get());
+            m_desiredROMPath = std::string(ROMPath.get());
         }
     }
 
@@ -290,7 +291,7 @@ void MainWindow::drawUI(Chip8MemoryView debugInfo) {
         ImGui::TableSetupColumn("Registers");
         ImGui::TableHeadersRow();
 
-        constexpr uint8_t kRegisterAmount = 16;
+        constexpr std::uint8_t kRegisterAmount = 16;
         for (int row = 0; row < kRegisterAmount; row++)
         {
             ImGui::TableNextRow();
@@ -319,7 +320,9 @@ void MainWindow::drawUI(Chip8MemoryView debugInfo) {
         ImGui::TableSetupColumn("Instructions");
         ImGui::TableHeadersRow();
 
-        ImGui::Text("mov WIP, WIP");
+        // Add instructions to history toolbar in reverse order, so newest are at the top
+        for (std::uint16_t i{m_instructionHistory.size()}; i-- > 0;)
+            ImGui::Text("%s", m_instructionHistory[i].c_str());
 
         ImGui::EndTable();
     }
@@ -348,7 +351,7 @@ void MainWindow::drawUI(Chip8MemoryView debugInfo) {
 // Start a position x, XOR x and the 7 following bits with rowData.
 // If the next 7 bits are in the following byte, continue flipping bits
 // in the second byte until the sprite byte is drawn.
-bool MainWindow::drawRow(int x_index, int y_index, uint8_t rowData) {
+bool MainWindow::drawRow(int x_index, int y_index, std::uint8_t rowData) {
     // If position values exceed screen limits, wrap around.
     x_index %= kScreenWidth;
     y_index %= kScreenHeight;
@@ -362,14 +365,14 @@ bool MainWindow::drawRow(int x_index, int y_index, uint8_t rowData) {
     // Y position is multiplied by the pitch (bytes per row)
     // Then we add the floor division of index / 8 to find the pixel's
     // corresponding byte (8 pixels per byte)
-    uint8_t pos = (kScreenPitch * y_index) + x_index / 8;
+    std::uint8_t pos = (kScreenPitch * y_index) + x_index / 8;
 
     // Determine bit index within byte
-    uint8_t bitPos = x_index % 8;
+    std::uint8_t bitPos = x_index % 8;
 
     // Create XOR mask for first byte (unused bits are unset)
-    uint8_t firstXOR = rowData >> bitPos;
-    uint8_t& row = m_frameBuffer[pos];
+    std::uint8_t firstXOR = rowData >> bitPos;
+    std::uint8_t& row = m_frameBuffer[pos];
 
     // AND the current row with the mask.
     // If two bits match, a set bit is flipped,T
@@ -386,11 +389,11 @@ bool MainWindow::drawRow(int x_index, int y_index, uint8_t rowData) {
     // to complete the drawing of the sprite byte.
     if (bitPos != 0) {
         // Set up new mask
-        uint8_t secondXOR = rowData << (8 - bitPos);
+        std::uint8_t secondXOR = rowData << (8 - bitPos);
 
         // Move to the next byte
         ++pos;
-        uint8_t& nextRow = m_frameBuffer[pos];
+        std::uint8_t& nextRow = m_frameBuffer[pos];
 
         if ((nextRow & secondXOR) != 0) {
             bitUnset = true;
@@ -401,6 +404,14 @@ bool MainWindow::drawRow(int x_index, int y_index, uint8_t rowData) {
     }
 
     return bitUnset;
+}
+
+std::string_view MainWindow::getROM() {
+    return m_desiredROMPath;
+}
+
+void MainWindow::pushInstructionHistory(std::string instruction) {
+    m_instructionHistory.push(instruction);
 }
 
 MainWindow::~MainWindow() {

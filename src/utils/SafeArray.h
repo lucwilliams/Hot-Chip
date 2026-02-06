@@ -1,18 +1,19 @@
 #pragma once
 
 #include <iostream>
+#include <span>
 #include <array>
 #include <cstdint>
 
 template<std::uint16_t m_size, bool debugEnabled>
 class SafeArray {
-    std::array<uint8_t, m_size> m_data{};
+    std::array<std::uint8_t, m_size> m_data{};
 
     public:
-        uint8_t& operator[](uint16_t index) {
+        std::uint8_t& operator[](std::uint16_t index) {
             // Exists solely to provide a useless reference
             // for an out-of-bounds access.
-            static uint8_t dummy {0};
+            static std::uint8_t dummy {0};
 
             if (index < m_size) {
                 return m_data[index];
@@ -40,7 +41,7 @@ class SafeArray {
             return m_data.begin();
         }
 
-        std::span<uint8_t> getDataView() {
+        std::span<std::uint8_t> getDataView() {
             return m_data;
         }
 

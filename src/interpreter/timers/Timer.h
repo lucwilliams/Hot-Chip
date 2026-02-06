@@ -4,10 +4,10 @@
 
 class Timer {
     protected:
-        uint8_t m_timer{0};
+        std::uint8_t m_timer{0};
 
     public:
-        void setTimer(uint8_t value) {
+        void setTimer(std::uint8_t value) {
             m_timer = value;
         }
 

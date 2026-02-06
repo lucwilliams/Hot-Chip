@@ -5,7 +5,7 @@
 // Delay timer is read+write
 class DelayTimer : public Timer {
     public:
-        uint8_t readTimer() {
+        std::uint8_t readTimer() {
             return m_timer;
         }
 

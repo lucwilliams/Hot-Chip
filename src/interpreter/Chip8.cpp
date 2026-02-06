@@ -8,8 +8,8 @@
 #include <chrono>
 #include "Chip8.h"
 
-Chip8::Chip8(const std::string& fileName, MainWindow& window)
-	: m_ROMPath{fileName}
+Chip8::Chip8(MainWindow& window)
+	: m_ROMPath{window.getROM()}
 	, m_window{window}
 {
     #if defined(_WIN64)
@@ -33,7 +33,7 @@ void Chip8::loadROM() {
 
 	if (inFS.is_open()) {
 		// Determine ROM size by checking the position of the get pointer
-		m_ROMSize = static_cast<uint16_t>(inFS.tellg());
+		m_ROMSize = static_cast<std::uint16_t>(inFS.tellg());
 
 		// Check that ROM isn't greater than the space allocated to it in program memory
 		// 4096 - 512 (offset of ROM in memory)
@@ -50,9 +50,6 @@ void Chip8::loadROM() {
 
 		// Initialise font data. Start font data in position 0x50 (+80 bytes) as is conventional.
 		std::copy(kFontData.begin(), kFontData.end(), m_memory.begin() + kFontOffset);
-
-		// Update m_sharedROMPath with currently loaded ROM
-		*m_sharedROMPath = m_ROMPath;
 	} else {
 		throw std::runtime_error("Error opening ROM: " + m_ROMPath + ", " + std::strerror(errno));
 	}
@@ -77,9 +74,9 @@ void Chip8::resetEmulator() {
 	m_window.clearDisplay();
 }
 
-void Chip8::decode(uint16_t instruction) {
+void Chip8::decode(std::uint16_t instruction) {
 	// Fourth nibble is the most significant
-	const uint8_t highestNibble = nibbleAt(instruction, 3);
+	const std::uint8_t highestNibble = nibbleAt(instruction, 3);
 
     // Keep track of whether PC has updated
     m_PCUpdated = false;
@@ -173,7 +170,7 @@ void Chip8::start() {
 		*/
 		if (!m_windowClosed) {
 			// Update ROM file path with new path requested
-			m_ROMPath = *m_sharedROMPath;
+			m_ROMPath = m_window.getROM();
 
 			// Reset emulator state and load ROM
 			resetEmulator();
@@ -185,8 +182,8 @@ void Chip8::start() {
 void Chip8::executionLoop() {
 	// The memory location of the ROM's final valid instruction
 	// Subtract two since instructions are two bytes in size.
-	const uint16_t finalInstruction {
-		static_cast<uint16_t>(kROMOffset + m_ROMSize - 2)
+	const std::uint16_t finalInstruction {
+		static_cast<std::uint16_t>(kROMOffset + m_ROMSize - 2)
 	};
 
 	// Whether all instructions have been executed
@@ -198,7 +195,7 @@ void Chip8::executionLoop() {
 		const auto frameStart = std::chrono::steady_clock::now();
 
 		// Check if user has loaded a new ROM
-		if (m_ROMPath != *m_sharedROMPath) {
+		if (m_ROMPath != m_window.getROM()) {
 			return;
 		}
 
@@ -245,7 +242,7 @@ void Chip8::executionLoop() {
 					 * update VX to the released key's value.
 					 */
 					if (m_awaitingKey && m_awaitingScanCode != kNULLScanCode) {
-						uint8_t& VX = m_registers[m_awaitingKeyRegNum];
+						std::uint8_t& VX = m_registers[m_awaitingKeyRegNum];
 						VX = scanCodeToPos(scanCode);
 
 						// Restore variables for next AWAIT_KEY call
@@ -257,7 +254,7 @@ void Chip8::executionLoop() {
 		}
 
 		// Count the number of instructions executed per frame for timing emulation (IPF)
-		uint16_t instructionsExecuted{0};
+		std::uint16_t instructionsExecuted{0};
 
 		// Execute a certain number of instructions per frame (~12).
 		// Don't continue execution if we're currently awaiting a key press in AWAIT_KEY instruction.
@@ -269,9 +266,9 @@ void Chip8::executionLoop() {
                 /*
                  * Fetch instruction:
                  * Our memory is 8 bits, but an instruction is 16 bits.
-                 * We concatenate the byte at PC with the byte that follows to form one uint16_t
+                 * We concatenate the byte at PC with the byte that follows to form one std::uint16_t
                  */
-                uint16_t instruction = static_cast<uint16_t>(m_memory[m_PC]) << 8 | m_memory[m_PC + 1];
+                std::uint16_t instruction = static_cast<std::uint16_t>(m_memory[m_PC]) << 8 | m_memory[m_PC + 1];
                 decode(instruction);
 
             	// Increment instruction count
@@ -290,12 +287,11 @@ void Chip8::executionLoop() {
 		}
 
 		// Create struct to pass read-only debug info to Window
-		Chip8MemoryView debugInfo {
+		Chip8DebugData debugInfo {
 			m_memory.getDataView(),
 			m_registers.getDataView(),
 			m_PC,
-			m_index,
-			m_sharedROMPath
+			m_index
 		};
 
 		// Render frame (no change if no draw/clear calls made)

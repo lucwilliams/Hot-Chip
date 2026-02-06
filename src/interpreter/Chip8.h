@@ -3,10 +3,11 @@
 #include <array>
 #include <random>
 #include <bitset>
-#include "../window/MainWindow.h"
 #include "timers/SoundTimer.h"
 #include "timers/DelayTimer.h"
-#include "SafeArray.h"
+#include "../utils/SafeArray.h"
+#include "../utils/RingBuffer.h"
+#include "../window/MainWindow.h"
 
 // Compile with -DDEBUG for debug output
 #ifdef DEBUG
@@ -24,7 +25,7 @@
 class Chip8 {
     // Character representations for 0-9 + A-F
     // https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#font
-    static constexpr std::array<uint8_t, 80> kFontData = {
+    static constexpr std::array<std::uint8_t, 80> kFontData = {
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
         0x20, 0x60, 0x20, 0x20, 0x70, // 1
         0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -44,82 +45,71 @@ class Chip8 {
     };
 
     // Size of emulated memory (4096)
-    static constexpr uint16_t kMemorySize = 0x1000;
+    static constexpr std::uint16_t kMemorySize = 0x1000;
 
     // Offset where ROM is loaded into emulated memory (512).
     // Although they're called ROMs, programs can actually
     // write to their data in memory.
-    static constexpr uint16_t kROMOffset = 0x200;
+    static constexpr std::uint16_t kROMOffset = 0x200;
 
     // Offset where font data is loaded into emulated memory (80)
-    static constexpr uint8_t kFontOffset = 0x50;
+    static constexpr std::uint8_t kFontOffset = 0x50;
 
     // The bit length of a nibble
-    static constexpr uint8_t kNibbleLength = 4;
+    static constexpr std::uint8_t kNibbleLength = 4;
 
     // Amount of emulated registers
-    static constexpr uint8_t kRegisterAmount = 16;
+    static constexpr std::uint8_t kRegisterAmount = 16;
 
     // The value used with AND on a 16 bit instruction to obtain a nibble
     // 00001111 in binary
-    static constexpr uint8_t kNibbleMask = 0xF;
+    static constexpr std::uint8_t kNibbleMask = 0xF;
 
     // The value used with AND on a 16 bit instruction to obtain the least significant byte
     // 11111111 in binary
-    static constexpr uint8_t kLowerByteMask = 0xFF;
+    static constexpr std::uint8_t kLowerByteMask = 0xFF;
 
     // The value used with AND on a 16 bit instruction
     // to obtain the lower 12 bits for addressing
     // 111111111111 in binary
-    static constexpr uint16_t kAddressMask = 0xFFF;
+    static constexpr std::uint16_t kAddressMask = 0xFFF;
 
     // The value used with AND to obtain the MSB of a byte
     // 10000000 in binary
-    static constexpr uint16_t kMSBMask = 0x80;
+    static constexpr std::uint16_t kMSBMask = 0x80;
 
     // Use constant instructions per frame (IPF) for now
-    static constexpr uint16_t kInstructionsPerFrame = 22;
+    static constexpr std::uint16_t kInstructionsPerFrame = 22;
 
     // Assume 60fps constant frame timing for now.
     static constexpr auto kFrameDuration = std::chrono::duration<double>(1.0 / 60.0);
-
-
 
     // Handle to waitable timer object for Windows
     #if defined(_WIN64)
         HANDLE m_winTimerHandle = nullptr;
     #endif
 
-    /*
-     * m_ROMPath contains the actual file path of the currently loaded ROM.
-     * m_sharedROMPath contains the desired path chosen by the UI.
-     *
-     * Once m_sharedROMPath updates, the emulator loads the ROM at that path,
-     * and m_ROMPath updates to use the path stored in m_sharedROMPath.
-     */
+    // m_ROMPath contains the file path of the currently loaded ROM.
     std::string m_ROMPath;
-
-    // TODO: Consider alternative container for m_sharedROMPath
-    std::shared_ptr<std::string> m_sharedROMPath{std::make_shared<std::string>()};
 
     // Emulated memory
     SafeArray<kMemorySize, kDebugEnabled> m_memory{};
-    uint16_t m_ROMSize{};
+    std::uint16_t m_ROMSize{};
 
     // Registers 0-9 + A-F (16 total)
     SafeArray<kRegisterAmount, kDebugEnabled> m_registers{};
 
     // Index/Address register (12 bits wide)
-    uint16_t m_index{};
+    std::uint16_t m_index{};
 
     // Program counter
     // (start at first instruction of ROM)
-    uint16_t m_PC{kROMOffset};
+    std::uint16_t m_PC{kROMOffset};
 
     // Stack, just for subroutine return addresses
     // TODO: Use SafeArray for m_stack?
-    std::array<uint16_t, 16> m_stack{};
-    uint8_t m_stackSize {0};
+    std::array<std::uint16_t, 16> m_stack{};
+    std::uint8_t m_stackSize {0};
 
     // Internal bool to determine whether the PC is to be incremented.
     // (don't increment the PC following jump or return instructions)
@@ -132,8 +122,8 @@ class Chip8 {
         )
     };
 
-    // Generate a random value from 0 to 255 (max value of uint8_t)
-    std::uniform_int_distribution<uint8_t> m_randUint8{0, 255};
+    // Generate a random value from 0 to 255 (max value of std::uint8_t)
+    std::uniform_int_distribution<std::uint8_t> m_randUint8{0, 255};
 
     // Window is initialised in the constructor initialisation list
     MainWindow& m_window;
@@ -160,15 +150,15 @@ class Chip8 {
     SDL_Scancode m_awaitingScanCode = kNULLScanCode;
 
     // The register number used to store keypress of AWAIT_KEY instruction
-    uint8_t m_awaitingKeyRegNum{0};
+    std::uint8_t m_awaitingKeyRegNum{0};
 
     // Second step of the fetch/decode/execute loop
-    void decode(uint16_t instruction);
+    void decode(std::uint16_t instruction);
 
     // -- Helper functions for manipulating opcodes --
 
     // Helper function to obtain a 4 bit nibble by position from a 16 bit opcode
-    static uint8_t nibbleAt(uint16_t instruction, uint8_t position) {
+    static std::uint8_t nibbleAt(std::uint16_t instruction, std::uint8_t position) {
         // Position is an index starting at zero and
         // must not exceed the index of the fourth nibble.
         if (position > kNibbleLength - 1)
@@ -178,9 +168,9 @@ class Chip8 {
             );
 
         // Byte mask of 8 bits at desired position.
-        uint16_t positionMask = kNibbleMask << position * kNibbleLength;
+        std::uint16_t positionMask = kNibbleMask << position * kNibbleLength;
 
-        const auto byte = static_cast<uint8_t>(
+        const auto byte = static_cast<std::uint8_t>(
             (instruction & positionMask) >> position * kNibbleLength
         );
 
@@ -188,21 +178,21 @@ class Chip8 {
     }
 
     // Helper function to obtain a 12 bit address (NNN) from a 16 bit opcode
-    static uint8_t getLowByte(uint16_t instruction) {
-        const auto lowByte = static_cast<uint8_t>(
+    static std::uint8_t getLowByte(std::uint16_t instruction) {
+        const auto lowByte = static_cast<std::uint8_t>(
             instruction & kLowerByteMask
         );
         return lowByte;
     }
 
     // Helper function to obtain a 12 bit address (NNN) from a 16 bit opcode
-    static uint16_t getAddressFromInstruction(uint16_t instruction) {
-        const uint16_t address = instruction & kAddressMask;
+    static std::uint16_t getAddressFromInstruction(std::uint16_t instruction) {
+        const std::uint16_t address = instruction & kAddressMask;
         return address;
     }
 
-    static uint8_t scanCodeToPos(SDL_Scancode scanCode) {
-        uint8_t pos{0};
+    static std::uint8_t scanCodeToPos(SDL_Scancode scanCode) {
+        std::uint8_t pos{0};
 
         /*
          * All 16 buttons used for the Chip-8 keypad.
@@ -238,27 +228,27 @@ class Chip8 {
 
     void setKeyState(SDL_Scancode scanCode, bool state) {
         // Position in m_keyStates array
-        uint8_t pos = scanCodeToPos(scanCode);
+        std::uint8_t pos = scanCodeToPos(scanCode);
         m_keyStates[pos] = state;
     }
 
     // All emulated instruction opcodes by prefix
-    void opcode0(uint16_t instruction);
-    void opcode1(uint16_t instruction);
-    void opcode2(uint16_t instruction);
-    void opcode3(uint16_t instruction);
-    void opcode4(uint16_t instruction);
-    void opcode5(uint16_t instruction);
-    void opcode6(uint16_t instruction);
-    void opcode7(uint16_t instruction);
-    void opcode8(uint16_t instruction);
-    void opcode9(uint16_t instruction);
-    void opcodeA(uint16_t instruction);
-    void opcodeB(uint16_t instruction);
-    void opcodeC(uint16_t instruction);
-    void opcodeD(uint16_t instruction);
-    void opcodeE(uint16_t instruction);
-    void opcodeF(uint16_t instruction);
+    void opcode0(std::uint16_t instruction);
+    void opcode1(std::uint16_t instruction);
+    void opcode2(std::uint16_t instruction);
+    void opcode3(std::uint16_t instruction);
+    void opcode4(std::uint16_t instruction);
+    void opcode5(std::uint16_t instruction);
+    void opcode6(std::uint16_t instruction);
+    void opcode7(std::uint16_t instruction);
+    void opcode8(std::uint16_t instruction);
+    void opcode9(std::uint16_t instruction);
+    void opcodeA(std::uint16_t instruction);
+    void opcodeB(std::uint16_t instruction);
+    void opcodeC(std::uint16_t instruction);
+    void opcodeD(std::uint16_t instruction);
+    void opcodeE(std::uint16_t instruction);
+    void opcodeF(std::uint16_t instruction);
 
     /*
      * Private member functions used to initialise and
@@ -276,7 +266,7 @@ class Chip8 {
     void executionLoop();
 
     public:
-        Chip8(const std::string& fileName, MainWindow& window);
+        Chip8(MainWindow& window);
         ~Chip8();
         void start();
 };

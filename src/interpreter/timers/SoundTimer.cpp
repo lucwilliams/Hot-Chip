@@ -3,15 +3,15 @@
 
 // Configuration to produce beep sound
 static constexpr SDL_AudioFormat kFormat = AUDIO_S16SYS;
-static constexpr uint8_t kChannels = 1;
-static constexpr uint16_t kFrequency = 44100;
-static constexpr uint16_t kBeepFrequency = 440;
-static constexpr uint16_t kAmplitude = 8000;
-static constexpr uint16_t kSampleCount = 1024;
+static constexpr std::uint8_t kChannels = 1;
+static constexpr std::uint16_t kFrequency = 44100;
+static constexpr std::uint16_t kBeepFrequency = 440;
+static constexpr std::uint16_t kAmplitude = 8000;
+static constexpr std::uint16_t kSampleCount = 1024;
 
 // Function to produce our beep sound to pass to the output audio device
 // https://wiki.libsdl.org/SDL2/SDL_AudioCallback
-static void audioCallback(void* userdata, uint8_t* stream, int len) {
+static void audioCallback(void* userdata, std::uint8_t* stream, int len) {
     auto* obtained = static_cast<SDL_AudioSpec*>(userdata);
     static int samplePos = 0;
 

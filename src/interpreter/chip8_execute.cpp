@@ -4,7 +4,7 @@
  * For opcodes where the most significant nibble is not unique,
  * this enum maps the least significant nibbles to their unique instructions.
  */
-enum class opcode : uint8_t {
+enum class opcode : std::uint8_t {
     CLEAR_DISPLAY = 0xE0,
     RETURN = 0xEE,
     REG_ASSIGNMENT = 0x0,
@@ -29,7 +29,7 @@ enum class opcode : uint8_t {
     LOAD_REG = 0x65
 };
 
-void Chip8::opcode0(uint16_t instruction) {
+void Chip8::opcode0(std::uint16_t instruction) {
     const opcode lowByte = static_cast<opcode>(
         getLowByte(instruction)
     );
@@ -37,6 +37,7 @@ void Chip8::opcode0(uint16_t instruction) {
 	switch (lowByte) {
         case opcode::CLEAR_DISPLAY:
             m_window.clearDisplay();
+	        m_window.pushInstructionHistory("DISPLAY CLEAR");
             break;
         case opcode::RETURN:
             if (m_stackSize > 0) {
@@ -50,6 +51,7 @@ void Chip8::opcode0(uint16_t instruction) {
                         << instruction << std::endl;
             }
 
+	        m_window.pushInstructionHistory("RETURN");
             break;
         default:
             if (kDebugEnabled)
@@ -58,14 +60,16 @@ void Chip8::opcode0(uint16_t instruction) {
 }
 
 // GOTO NNN
-void Chip8::opcode1(uint16_t instruction) {
+void Chip8::opcode1(std::uint16_t instruction) {
     // Update PC to new address from instruction
     m_PC = getAddressFromInstruction(instruction);
     m_PCUpdated = true;
+
+	m_window.pushInstructionHistory("GOTO");
 }
 
 // CALL *NNN
-void Chip8::opcode2(uint16_t instruction) {
+void Chip8::opcode2(std::uint16_t instruction) {
     // Prevent out-of-bounds stack access.
     // Stack limited to a maximum subroutine depth of 16.
     if (m_stackSize < 16) {
@@ -81,61 +85,63 @@ void Chip8::opcode2(uint16_t instruction) {
             "[ERROR] Maximum stack depth exceeded!"
             << instruction << std::endl;
     }
+
+	m_window.pushInstructionHistory("CALL");
 }
 
 // if (Vx == NN)
-void Chip8::opcode3(uint16_t instruction) {
+void Chip8::opcode3(std::uint16_t instruction) {
     // Get register value
-    uint8_t VX = m_registers[nibbleAt(instruction, 2)];
+    std::uint8_t VX = m_registers[nibbleAt(instruction, 2)];
 
     // Get 8-bit constant
-    uint8_t NN = getLowByte(instruction);
+    std::uint8_t NN = getLowByte(instruction);
 
     if (VX == NN)
         m_PC += 2;
 }
 
 // if (Vx != NN)
-void Chip8::opcode4(uint16_t instruction) {
+void Chip8::opcode4(std::uint16_t instruction) {
     // Get register value
-    uint8_t VX = m_registers[nibbleAt(instruction, 2)];
+    std::uint8_t VX = m_registers[nibbleAt(instruction, 2)];
 
     // Get 8-bit constant
-    uint8_t NN = getLowByte(instruction);
+    std::uint8_t NN = getLowByte(instruction);
 
     if (VX != NN)
         m_PC += 2;
 }
 
 // if (Vx == Vy)
-void Chip8::opcode5(uint16_t instruction) {
+void Chip8::opcode5(std::uint16_t instruction) {
     // Get register value
-    uint8_t VX = m_registers[nibbleAt(instruction, 2)];
-    uint8_t VY = m_registers[nibbleAt(instruction, 1)];
+    std::uint8_t VX = m_registers[nibbleAt(instruction, 2)];
+    std::uint8_t VY = m_registers[nibbleAt(instruction, 1)];
 
     if (VX == VY)
         m_PC += 2;
 }
 
 // VX = NN
-void Chip8::opcode6(uint16_t instruction) {
+void Chip8::opcode6(std::uint16_t instruction) {
     // Get register number
-    uint8_t VX = nibbleAt(instruction, 2);
+    std::uint8_t VX = nibbleAt(instruction, 2);
 
     // Get 8-bit constant
-    uint8_t NN = getLowByte(instruction);
+    std::uint8_t NN = getLowByte(instruction);
 
     // Set VX = NN
     m_registers[VX] = NN;
 }
 
 // VX += NN
-void Chip8::opcode7(uint16_t instruction) {
+void Chip8::opcode7(std::uint16_t instruction) {
     // Get register number
-    uint8_t VX = nibbleAt(instruction, 2);
+    std::uint8_t VX = nibbleAt(instruction, 2);
 
     // Get 8-bit constant
-    uint8_t NN = getLowByte(instruction);
+    std::uint8_t NN = getLowByte(instruction);
 
     // Add NN to VX
     m_registers[VX] += NN;
@@ -143,14 +149,14 @@ void Chip8::opcode7(uint16_t instruction) {
 
 
 // Register arithmetic and bitwise operations
-void Chip8::opcode8(uint16_t instruction) {
+void Chip8::opcode8(std::uint16_t instruction) {
     const opcode lastNibble = static_cast<opcode>(
         nibbleAt(instruction, 0)
     );
 
-    uint8_t& VY = m_registers[nibbleAt(instruction, 1)];
-    uint8_t& VX = m_registers[nibbleAt(instruction, 2)];
-    uint8_t& VF = m_registers[0xF];
+    std::uint8_t& VY = m_registers[nibbleAt(instruction, 1)];
+    std::uint8_t& VX = m_registers[nibbleAt(instruction, 2)];
+    std::uint8_t& VF = m_registers[0xF];
 
     switch (lastNibble) {
         case opcode::REG_ASSIGNMENT:
@@ -168,12 +174,12 @@ void Chip8::opcode8(uint16_t instruction) {
         case opcode::REG_ADD:
         {
             // Use a 16-bit unsigned int to get the sum without overflow
-            uint16_t sum = VX + VY;
+            std::uint16_t sum = VX + VY;
 
             VX = sum;
 
-            // Does the sum of the two registers exceed the maximum for uint8_t?
-            if (sum > std::numeric_limits<uint8_t>::max()) {
+            // Does the sum of the two registers exceed the maximum for std::uint8_t?
+            if (sum > std::numeric_limits<std::uint8_t>::max()) {
                 VF = 1;
             } else {
                 VF = 0;
@@ -211,7 +217,7 @@ void Chip8::opcode8(uint16_t instruction) {
             // QUIRK
             VX = VY;
 
-            uint8_t VX_MSB = (VX & kMSBMask) >> 7;
+            std::uint8_t VX_MSB = (VX & kMSBMask) >> 7;
             VX <<= 1;
 
             // Store MSB of VX in VF
@@ -222,7 +228,7 @@ void Chip8::opcode8(uint16_t instruction) {
             // QUIRK
             VX = VY;
 
-            uint8_t VX_LSB = VX & 1;
+            std::uint8_t VX_LSB = VX & 1;
             VX >>= 1;
 
             // Store LSB of VX in VF
@@ -236,28 +242,28 @@ void Chip8::opcode8(uint16_t instruction) {
 }
 
 // if (Vx != Vy)
-void Chip8::opcode9(uint16_t instruction) {
+void Chip8::opcode9(std::uint16_t instruction) {
     // Get register value
-    uint8_t VX = m_registers[nibbleAt(instruction, 2)];
-    uint8_t VY = m_registers[nibbleAt(instruction, 1)];
+    std::uint8_t VX = m_registers[nibbleAt(instruction, 2)];
+    std::uint8_t VY = m_registers[nibbleAt(instruction, 1)];
 
     if (VX != VY)
         m_PC += 2;
 }
 
 // I = NNN
-void Chip8::opcodeA(uint16_t instruction) {
+void Chip8::opcodeA(std::uint16_t instruction) {
     // Get 12 byte address
-    uint16_t NNN = getAddressFromInstruction(instruction);
+    std::uint16_t NNN = getAddressFromInstruction(instruction);
 
     // Set I to NNN
     m_index = NNN;
 }
 
 // PC = V0 + NNN
-void Chip8::opcodeB(uint16_t instruction) {
-    uint8_t V0 = m_registers[0];
-    uint16_t NNN = getAddressFromInstruction(instruction);
+void Chip8::opcodeB(std::uint16_t instruction) {
+    std::uint8_t V0 = m_registers[0];
+    std::uint16_t NNN = getAddressFromInstruction(instruction);
 
     // Set PC to V0 + NNN
     m_PC = V0 + NNN;
@@ -265,26 +271,26 @@ void Chip8::opcodeB(uint16_t instruction) {
 }
 
 // rand(0, NN), NN < 256
-void Chip8::opcodeC(uint16_t instruction) {
-    uint8_t& VX = m_registers[nibbleAt(instruction, 2)];
-    uint8_t NN = getLowByte(instruction);
+void Chip8::opcodeC(std::uint16_t instruction) {
+    std::uint8_t& VX = m_registers[nibbleAt(instruction, 2)];
+    std::uint8_t NN = getLowByte(instruction);
 
     VX = m_randUint8(m_mersenneTwister) % NN;
 }
 
 // draw(Vx, Vy, N)
-void Chip8::opcodeD(uint16_t instruction) {
+void Chip8::opcodeD(std::uint16_t instruction) {
     bool bitFlipped = false;
 
-    uint8_t VX = m_registers[nibbleAt(instruction, 2)];
-    uint8_t VY = m_registers[nibbleAt(instruction, 1)];
-    uint8_t& VF = m_registers[0xF];
+    std::uint8_t VX = m_registers[nibbleAt(instruction, 2)];
+    std::uint8_t VY = m_registers[nibbleAt(instruction, 1)];
+    std::uint8_t& VF = m_registers[0xF];
 
-    uint8_t height = nibbleAt(instruction, 0);
+    std::uint8_t height = nibbleAt(instruction, 0);
 
     // Draw each row for height N
-    for (uint8_t y {0}; y < height; ++y) {
-        uint8_t rowData = m_memory[m_index + y];
+    for (std::uint8_t y {0}; y < height; ++y) {
+        std::uint8_t rowData = m_memory[m_index + y];
 
         // Update the framebuffer to draw this rowData of pixels
         bool rowBitFlip = m_window.drawRow(
@@ -305,12 +311,12 @@ void Chip8::opcodeD(uint16_t instruction) {
 }
 
 // Skip next instruction if key stored in VX is pressed
-void Chip8::opcodeE(uint16_t instruction) {
+void Chip8::opcodeE(std::uint16_t instruction) {
     const opcode lowByte = static_cast<opcode>(
         getLowByte(instruction)
     );
 
-    uint8_t VX = m_registers[nibbleAt(instruction, 2)];
+    std::uint8_t VX = m_registers[nibbleAt(instruction, 2)];
 
     switch (lowByte) {
         case opcode::IS_KEY_PRESSED:
@@ -331,13 +337,13 @@ void Chip8::opcodeE(uint16_t instruction) {
 }
 
 // Timers, keystrokes and misc memory instructions involving VX
-void Chip8::opcodeF(uint16_t instruction) {
+void Chip8::opcodeF(std::uint16_t instruction) {
     const opcode lowByte = static_cast<opcode>(
         getLowByte(instruction)
     );
 
-    uint8_t VXRegisterNumber = nibbleAt(instruction, 2);
-    uint8_t& VX = m_registers[VXRegisterNumber];
+    std::uint8_t VXRegisterNumber = nibbleAt(instruction, 2);
+    std::uint8_t& VX = m_registers[VXRegisterNumber];
 
     switch (lowByte) {
         case opcode::TIMER_GET_DELAY:
@@ -368,13 +374,13 @@ void Chip8::opcodeF(uint16_t instruction) {
             break;
         case opcode::DUMP_REG:
             // Store the value of all registers starting at the address of I
-            for (uint8_t x = 0; x <= VXRegisterNumber; ++x) {
+            for (std::uint8_t x = 0; x <= VXRegisterNumber; ++x) {
                 m_memory[m_index + x] = m_registers[x];
             }
             break;
         case opcode::LOAD_REG:
             // Load the values starting at the address of I into the registers
-            for (uint8_t x = 0; x <= VXRegisterNumber; ++x) {
+            for (std::uint8_t x = 0; x <= VXRegisterNumber; ++x) {
                 m_registers[x] = m_memory[m_index + x];
             }
             break;

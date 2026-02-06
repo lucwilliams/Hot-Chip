@@ -5,9 +5,9 @@
 
 // Sound timer is write only
 class SoundTimer : public Timer {
-    static constexpr uint8_t kTimerFrequency = 60;
-    static constexpr uint8_t kAudioPlay = 0;
-    static constexpr uint8_t kAudioPause = 1;
+    static constexpr std::uint8_t kTimerFrequency = 60;
+    static constexpr std::uint8_t kAudioPlay = 0;
+    static constexpr std::uint8_t kAudioPause = 1;
 
     SDL_AudioSpec m_desired{}, m_obtained{};
 
