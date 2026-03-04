@@ -268,14 +268,24 @@ void MainWindow::drawUI(Chip8DebugData debugInfo) {
         kLockedWindowFlags
     );
 
-    if (ImGui::Button("Load ROM")) {
+    // Scale button text and border
+    ImGui::SetWindowFontScale(2.5);
+    constexpr ImVec2 buttonSize(290, 60);
+
+    if (ImGui::Button("Load R0M", buttonSize)) {
         NFD::UniquePath ROMPath = openFileBrowser();
 
         // If the user provided a valid file path
         if (ROMPath) {
             m_desiredROMPath = std::string(ROMPath.get());
+
+            // Reset instruction history
+            m_instructionHistory.clear();
         }
     }
+
+    // Return text scale
+    ImGui::SetWindowFontScale(1);
 
     ImGui::End();
 
@@ -314,7 +324,7 @@ void MainWindow::drawUI(Chip8DebugData debugInfo) {
         kLockedWindowFlags
     );
 
-    // Create table for instructions (WIP)
+    // Create table for instructions
     if (ImGui::BeginTable("Instructions", 1, 0))
     {
         ImGui::TableSetupColumn("Instructions");
@@ -410,7 +420,7 @@ std::string_view MainWindow::getROM() {
     return m_desiredROMPath;
 }
 
-void MainWindow::pushInstructionHistory(std::string instruction) {
+void MainWindow::pushInstructionHistory(const std::string& instruction) {
     m_instructionHistory.push(instruction);
 }
 

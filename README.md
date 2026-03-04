@@ -2,7 +2,7 @@
 
 Hot-Chip is a work-in-progress interpreter for the CHIP-8 programming language.
 
-![IBM splash logo running in Hot-Chip](assets/IBM%20Splash.png)
+![IBM splash logo running in Hot-Chip](assets/Hot-Chip.png)
 
 ### Development progress:
     - Wrapper class for handling SDL window functionality ✔
@@ -12,13 +12,13 @@ Hot-Chip is a work-in-progress interpreter for the CHIP-8 programming language.
     - Emulated timers, sound and keyboard ✔ 
     - Complete initial draft implementation of full instruction set ✔
     - Emulator passes all Timendus test ROMs ✔
+    - Fix instruction timing and implement accurate 60fps frame limiting ✔
 
     TO:DO:
     - Create debug tooling using ImGUI for UI (WIP)
-    - Fix instruction timing and implement accurate 60fps frame limiting
     - Debug and test all instructions for correct behaviour
     
-    Long term: ...3DS port? 👀
+    Long term: ...Nintendo Switch port? 👀
 
 The end goal for the program is a fully functional cross-platform CHIP-8 interpreter that can be compiled to Windows, Linux and macOS.
 

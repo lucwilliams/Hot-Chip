@@ -11,18 +11,21 @@ class RingBuffer {
 
     public:
         void push(const T& element) {
-            m_data[m_topIndex % m_capacity] = element;
-            ++m_topIndex;
+            m_data[m_topIndex] = element;
+            m_topIndex = (m_topIndex + 1) % m_capacity;
 
             if (m_size < m_capacity)
                 m_size++;
         }
 
         const T& operator[](std::uint16_t index) const {
+            if (m_size == m_capacity)
+                index = (m_topIndex + index) % m_capacity;
+
             return m_data[index];
         }
 
-        std::uint16_t size() {
+        [[nodiscard]] std::uint16_t size() const {
             return m_size;
         }
 
@@ -32,7 +35,7 @@ class RingBuffer {
         }
 
         void clear() {
-            m_data.fill(0);
             m_size = 0;
+            m_topIndex = 0;
         }
 };

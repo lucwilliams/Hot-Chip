@@ -3,10 +3,10 @@
 #include <array>
 #include <random>
 #include <bitset>
+#include <format>
 #include "timers/SoundTimer.h"
 #include "timers/DelayTimer.h"
 #include "../utils/SafeArray.h"
-#include "../utils/RingBuffer.h"
 #include "../window/MainWindow.h"
 
 // Compile with -DDEBUG for debug output
@@ -224,6 +224,14 @@ class Chip8 {
         }
 
         return pos;
+    }
+
+    static std::string u8toHex(std::uint8_t val) {
+        return std::format("{:02X}", static_cast<unsigned>(val));
+    }
+
+    static std::string u16toHex(std::uint16_t val) {
+        return std::format("{:04X}", static_cast<unsigned>(val));
     }
 
     void setKeyState(SDL_Scancode scanCode, bool state) {

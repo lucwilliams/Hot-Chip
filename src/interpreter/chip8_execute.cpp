@@ -65,7 +65,7 @@ void Chip8::opcode1(std::uint16_t instruction) {
     m_PC = getAddressFromInstruction(instruction);
     m_PCUpdated = true;
 
-	m_window.pushInstructionHistory("GOTO");
+	m_window.pushInstructionHistory(std::format("GOTO {}", u16toHex(instruction)));
 }
 
 // CALL *NNN

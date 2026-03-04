@@ -1,5 +1,6 @@
 #pragma once
 
+#include <format>
 #include <SDL.h>
 #include <nfd.hpp>
 #include "../interpreter/Chip8DebugData.h"
@@ -16,8 +17,9 @@ class MainWindow {
     static constexpr int kPackedPixelCount = kPixelCount / 8;
     static constexpr int kScreenPitch = kScreenWidth / 8;
 
-    // The amount of instructions to be saved in the history toolbar
-    static constexpr std::uint16_t kInstructionHistorySize = 800;
+    // The amount of instructions to be saved in the history toolbar.
+    // Power of 2 is used for performant modulo operation.
+    static constexpr std::uint16_t kInstructionHistorySize = 512;
 
     // SDL Window objects (nullptr initialised)
     SDL_Texture* m_texture{};
@@ -29,7 +31,7 @@ class MainWindow {
     std::span<std::uint8_t> m_frameBuffer{};
 
     // Contains the desired ROM path chosen by the UI.
-    // Once m_desiredROMPath updates, Chip8 loads the ROM at that path,
+    // Once m_desiredROMPath updates, Chip8 loads the ROM at that path.
     std::string m_desiredROMPath{};
 
     // Instruction history for debug UI
@@ -44,7 +46,7 @@ class MainWindow {
         void render();
         void clearDisplay();
         void drawUI(Chip8DebugData debugInfo);
-        void pushInstructionHistory(std::string instruction);
+        void pushInstructionHistory(const std::string& instruction);
         bool drawRow(int x_index, int y_index, std::uint8_t rowData);
         std::string_view getROM();
         static NFD::UniquePath openFileBrowser();
