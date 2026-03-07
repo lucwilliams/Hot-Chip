@@ -39,7 +39,9 @@ void Chip8::opcode0(std::uint16_t instruction) {
             m_window.clearDisplay();
 	        m_window.pushInstructionHistory("DISPLAY CLEAR");
             break;
-        case opcode::RETURN:
+	    case opcode::RETURN: {
+	        const std::uint16_t preReturnAddress{m_PC};
+
             if (m_stackSize > 0) {
                 // Pop return address from the stack
                 m_PC = m_stack[--m_stackSize];
@@ -51,8 +53,14 @@ void Chip8::opcode0(std::uint16_t instruction) {
                         << instruction << std::endl;
             }
 
-	        m_window.pushInstructionHistory("RETURN");
+	        m_window.pushInstructionHistory(
+	            std::format("RETURN {} -> {}",
+	                u16toHex(preReturnAddress), u16toHex(m_PC)
+	            )
+	        );
+
             break;
+        }
         default:
             if (kDebugEnabled)
                 std::cout << "[DEBUG] Unknown instruction: " << instruction << std::endl;
@@ -68,7 +76,7 @@ void Chip8::opcode1(std::uint16_t instruction) {
 	m_window.pushInstructionHistory(std::format("GOTO {}", u16toHex(instruction)));
 }
 
-// CALL *NNN
+// CALL NNN
 void Chip8::opcode2(std::uint16_t instruction) {
     // Prevent out-of-bounds stack access.
     // Stack limited to a maximum subroutine depth of 16.
@@ -86,41 +94,59 @@ void Chip8::opcode2(std::uint16_t instruction) {
             << instruction << std::endl;
     }
 
-	m_window.pushInstructionHistory("CALL");
+	m_window.pushInstructionHistory(std::format("CALL {}", u16toHex(m_PC)));
 }
 
 // if (Vx == NN)
 void Chip8::opcode3(std::uint16_t instruction) {
     // Get register value
-    std::uint8_t VX = m_registers[nibbleAt(instruction, 2)];
+    std::uint8_t regIndex = nibbleAt(instruction, 2);
+    std::uint8_t VX = m_registers[regIndex];
 
     // Get 8-bit constant
     std::uint8_t NN = getLowByte(instruction);
 
     if (VX == NN)
         m_PC += 2;
+    
+	m_window.pushInstructionHistory(
+	    std::format("IF V{} == {}", u8toHex(regIndex), u8toHex(NN))
+	);
 }
 
 // if (Vx != NN)
 void Chip8::opcode4(std::uint16_t instruction) {
     // Get register value
-    std::uint8_t VX = m_registers[nibbleAt(instruction, 2)];
+    std::uint8_t regIndex = nibbleAt(instruction, 2);
+    std::uint8_t VX = m_registers[regIndex];
 
     // Get 8-bit constant
     std::uint8_t NN = getLowByte(instruction);
 
     if (VX != NN)
         m_PC += 2;
+    
+    m_window.pushInstructionHistory(
+        std::format("IF V{} != {}", u8toHex(regIndex), u8toHex(NN))
+    );
 }
 
 // if (Vx == Vy)
 void Chip8::opcode5(std::uint16_t instruction) {
+    // Get register indexes
+    std::uint8_t VX_index = nibbleAt(instruction, 2);
+    std::uint8_t VY_index = nibbleAt(instruction, 1);
+    
     // Get register value
-    std::uint8_t VX = m_registers[nibbleAt(instruction, 2)];
-    std::uint8_t VY = m_registers[nibbleAt(instruction, 1)];
+    std::uint8_t VX = m_registers[VX_index];
+    std::uint8_t VY = m_registers[VY_index];
 
     if (VX == VY)
         m_PC += 2;
+    
+    m_window.pushInstructionHistory(
+        std::format("IF V{} == V{}", u8toHex(VX_index), u8toHex(VY_index))
+    );
 }
 
 // VX = NN
@@ -133,6 +159,10 @@ void Chip8::opcode6(std::uint16_t instruction) {
 
     // Set VX = NN
     m_registers[VX] = NN;
+
+    m_window.pushInstructionHistory(
+        std::format("V{} = {}", u8toHex(VX), u8toHex(NN))
+    );
 }
 
 // VX += NN
@@ -145,6 +175,10 @@ void Chip8::opcode7(std::uint16_t instruction) {
 
     // Add NN to VX
     m_registers[VX] += NN;
+
+    m_window.pushInstructionHistory(
+        std::format("V{} += {}", u8toHex(VX), u8toHex(NN))
+    );
 }
 
 
@@ -154,22 +188,42 @@ void Chip8::opcode8(std::uint16_t instruction) {
         nibbleAt(instruction, 0)
     );
 
-    std::uint8_t& VY = m_registers[nibbleAt(instruction, 1)];
-    std::uint8_t& VX = m_registers[nibbleAt(instruction, 2)];
+    // Get register indexes
+    std::uint8_t VX_index = nibbleAt(instruction, 2);
+    std::uint8_t VY_index = nibbleAt(instruction, 1);
+
+    std::uint8_t& VX = m_registers[VX_index];
+    std::uint8_t& VY = m_registers[VY_index];
     std::uint8_t& VF = m_registers[0xF];
 
     switch (lastNibble) {
         case opcode::REG_ASSIGNMENT:
             VX = VY;
+
+            m_window.pushInstructionHistory(
+                std::format("V{} = V{}", u8toHex(VX_index), u8toHex(VY_index))
+            );
             break;
         case opcode::REG_OR:
             VX |= VY;
+
+            m_window.pushInstructionHistory(
+                std::format("V{} |= V{}", u8toHex(VX_index), u8toHex(VY_index))
+            );
             break;
         case opcode::REG_AND:
             VX &= VY;
+
+            m_window.pushInstructionHistory(
+                std::format("V{} &= V{}", u8toHex(VX_index), u8toHex(VY_index))
+            );
             break;
         case opcode::REG_XOR:
             VX ^= VY;
+
+            m_window.pushInstructionHistory(
+                std::format("V{} ^= V{}", u8toHex(VX_index), u8toHex(VY_index))
+            );
             break;
         case opcode::REG_ADD:
         {
@@ -184,6 +238,13 @@ void Chip8::opcode8(std::uint16_t instruction) {
             } else {
                 VF = 0;
             }
+
+            m_window.pushInstructionHistory(
+                std::format(
+                    "V{} += V{}, VF = {}",
+                    u8toHex(VX_index), u8toHex(VY_index), u8toHex(VF)
+                )
+            );
             break;
         }
         case opcode::REG_SUBTRACT:
@@ -197,6 +258,13 @@ void Chip8::opcode8(std::uint16_t instruction) {
             } else {
                 VF = 1;
             }
+
+            m_window.pushInstructionHistory(
+                std::format(
+                    "V{} -= V{}, VF = {}",
+                    u8toHex(VX_index), u8toHex(VY_index), u8toHex(VF)
+                )
+            );
             break;
         }
         case opcode::REG_DIFFERENCE:
@@ -211,6 +279,12 @@ void Chip8::opcode8(std::uint16_t instruction) {
                 VF = 1;
             }
 
+            m_window.pushInstructionHistory(
+                std::format(
+                    "V{} = V{} - V{}, VF = {}",
+                    u8toHex(VX_index), u8toHex(VY_index), u8toHex(VX_index), u8toHex(VF)
+                )
+            );
             break;
         }
         case opcode::REG_LSHIFT: {
@@ -222,6 +296,13 @@ void Chip8::opcode8(std::uint16_t instruction) {
 
             // Store MSB of VX in VF
             VF = VX_MSB;
+
+            m_window.pushInstructionHistory(
+                std::format(
+                    "V{} = V{} << 1, VF = {}",
+                    u8toHex(VX_index), u8toHex(VY_index), u8toHex(VF)
+                )
+            );
             break;
         }
         case opcode::REG_RSHIFT: {
@@ -233,6 +314,13 @@ void Chip8::opcode8(std::uint16_t instruction) {
 
             // Store LSB of VX in VF
             VF = VX_LSB;
+
+            m_window.pushInstructionHistory(
+                std::format(
+                    "V{} = V{} >> 1, VF = {}",
+                    u8toHex(VX_index), u8toHex(VY_index), u8toHex(VF)
+                )
+            );
             break;
         }
         default:
@@ -243,12 +331,21 @@ void Chip8::opcode8(std::uint16_t instruction) {
 
 // if (Vx != Vy)
 void Chip8::opcode9(std::uint16_t instruction) {
+    // Get register indexes
+    std::uint8_t VX_index = nibbleAt(instruction, 2);
+    std::uint8_t VY_index = nibbleAt(instruction, 1);
+
     // Get register value
-    std::uint8_t VX = m_registers[nibbleAt(instruction, 2)];
-    std::uint8_t VY = m_registers[nibbleAt(instruction, 1)];
+    std::uint8_t VX = m_registers[VX_index];
+    std::uint8_t VY = m_registers[VY_index];
+
 
     if (VX != VY)
         m_PC += 2;
+
+    m_window.pushInstructionHistory(
+        std::format("IF V{} != V{}", u8toHex(VX_index), u8toHex(VY_index))
+    );
 }
 
 // I = NNN
@@ -258,6 +355,10 @@ void Chip8::opcodeA(std::uint16_t instruction) {
 
     // Set I to NNN
     m_index = NNN;
+
+    m_window.pushInstructionHistory(
+        std::format("I = {}", u16toHex(NNN))
+    );
 }
 
 // PC = V0 + NNN
@@ -268,14 +369,23 @@ void Chip8::opcodeB(std::uint16_t instruction) {
     // Set PC to V0 + NNN
     m_PC = V0 + NNN;
     m_PCUpdated = true;
+
+    m_window.pushInstructionHistory(
+        std::format("PC = {} + {}", u8toHex(V0), u16toHex(NNN))
+    );
 }
 
-// rand(0, NN), NN < 256
+// VX = rand(0, NN), NN < 256
 void Chip8::opcodeC(std::uint16_t instruction) {
-    std::uint8_t& VX = m_registers[nibbleAt(instruction, 2)];
+    std::uint8_t regIndex = nibbleAt(instruction, 2);
+    std::uint8_t& VX = m_registers[regIndex];
     std::uint8_t NN = getLowByte(instruction);
 
     VX = m_randUint8(m_mersenneTwister) % NN;
+
+    m_window.pushInstructionHistory(
+        std::format("V{} = {} (RAND)", u8toHex(regIndex), u8toHex(VX))
+    );
 }
 
 // draw(Vx, Vy, N)
@@ -308,6 +418,13 @@ void Chip8::opcodeD(std::uint16_t instruction) {
     } else {
         VF = 0;
     }
+
+    m_window.pushInstructionHistory(
+        std::format(
+            "DRAW: ({}, {}), N: {}, VF: ",
+            u8toHex(VX), u8toHex(VY), u8toHex(height), u8toHex(VF)
+        )
+    );
 }
 
 // Skip next instruction if key stored in VX is pressed
@@ -324,11 +441,17 @@ void Chip8::opcodeE(std::uint16_t instruction) {
                 // Instructions are two bytes, increment by two
                 m_PC += 2;
 
+            m_window.pushInstructionHistory(
+                std::format("SKIP IF {} PRESSED", u8toHex(VX))
+            );
             break;
         case opcode::IS_KEY_NOT_PRESSED:
             if (!m_keyStates[VX])
                 m_PC += 2;
 
+            m_window.pushInstructionHistory(
+                std::format("SKIP IF {} NOT PRESSED", u8toHex(VX))
+            );
             break;
         default:
             if (kDebugEnabled)
@@ -342,47 +465,90 @@ void Chip8::opcodeF(std::uint16_t instruction) {
         getLowByte(instruction)
     );
 
-    std::uint8_t VXRegisterNumber = nibbleAt(instruction, 2);
-    std::uint8_t& VX = m_registers[VXRegisterNumber];
+    std::uint8_t VX_index = nibbleAt(instruction, 2);
+    std::uint8_t& VX = m_registers[VX_index];
 
     switch (lowByte) {
         case opcode::TIMER_GET_DELAY:
             VX = m_delayTimer.readTimer();
+
+            m_window.pushInstructionHistory(
+                std::format("GET DELAY TIMER : {}", u8toHex(VX))
+            );
             break;
         case opcode::TIMER_DELAY_SET:
             m_delayTimer.setTimer(VX);
+
+            m_window.pushInstructionHistory(
+               std::format("SET DELAY TIMER: {}", u8toHex(VX))
+            );
             break;
         case opcode::TIMER_SOUND_SET:
+            m_window.pushInstructionHistory(
+              std::format("SET SOUND TIMER: {}", u8toHex(VX))
+            );
+
             m_soundTimer.setTimer(VX);
             break;
         case opcode::AWAIT_KEY:
             // Behaviour of this instruction takes place in the main event loop in executionLoop()
             m_awaitingKey = true;
+
+            m_window.pushInstructionHistory("AWAITING KEYPRESS");
             break;
         case opcode::ADD_TO_I:
             m_index += VX;
+
+            m_window.pushInstructionHistory(
+              std::format("I += {}, I = {}", u8toHex(VX), u8toHex(m_index))
+            );
             break;
         case opcode::LOAD_CHAR:
             // Each font consists of five bytes.
             m_index = m_memory[kFontOffset + (VX * 5)];
+
+            m_window.pushInstructionHistory(
+                std::format("LOAD CHAR: {}", u8toHex(VX))
+            );
             break;
         case opcode::BCD_VX:
             // Express VX's value in BCD format (hundreds, tens, ones)
             m_memory[m_index] = VX / 100;
             m_memory[m_index + 1] = (VX % 100) / 10;
             m_memory[m_index + 2] = VX % 10;
+        
+            m_window.pushInstructionHistory(
+                std::format(
+                    "BCD V{} = {} INDEX: {}",
+                    u8toHex(VX_index), u8toHex(VX), u8toHex(m_index)
+                )
+            );
             break;
         case opcode::DUMP_REG:
-            // Store the value of all registers starting at the address of I
-            for (std::uint8_t x = 0; x <= VXRegisterNumber; ++x) {
+            // Store the value of all registers up to VX, starting at the address of I
+            for (std::uint8_t x = 0; x <= VX_index; ++x) {
                 m_memory[m_index + x] = m_registers[x];
             }
+
+            m_window.pushInstructionHistory(
+                std::format(
+                    "DUMP REG: VX = {}, I = {}",
+                    u8toHex(VX_index), u8toHex(m_index)
+                )
+            );
             break;
         case opcode::LOAD_REG:
-            // Load the values starting at the address of I into the registers
-            for (std::uint8_t x = 0; x <= VXRegisterNumber; ++x) {
+            // Load the values starting at the address of I into registers up to VX
+            for (std::uint8_t x = 0; x <= VX_index; ++x) {
                 m_registers[x] = m_memory[m_index + x];
             }
+
+            m_window.pushInstructionHistory(
+                std::format(
+                    "LOAD REG: VX = {}, I = {}",
+                    u8toHex(VX_index), u8toHex(m_index)
+                )
+            );
             break;
         default:
             if (kDebugEnabled)
